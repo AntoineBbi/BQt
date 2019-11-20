@@ -1,4 +1,6 @@
-# BQt: Joint Modeling for longitudinal and time-to-event data using linear quantile mixed model in Bayesian framework
+# BQt package for R
+
+Joint Modeling for longitudinal and time-to-event data using linear quantile mixed model in Bayesian framework
 
 To try the current development version from github, use:
 
