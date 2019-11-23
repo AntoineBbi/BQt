@@ -1,8 +1,8 @@
-jags_qr <-
-  function () {
-  # constants 
-  c1 <- (1-2*qt)/(qt*(1-qt))
-  c2 <- 2/(qt*(1-qt))
+jags_lqm <-
+  function (...) {
+  # constants
+  c1 <- (1-2*tau)/(tau*(1-tau))
+  c2 <- 2/(tau*(1-tau))
   # quantile linear regression
   for (i in 1:I){
     y[i] ~ dnorm(mu[i], prec[i])

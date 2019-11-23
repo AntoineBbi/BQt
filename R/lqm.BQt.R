@@ -32,8 +32,7 @@
 #' #---- Fit regression model for the first quartile
 #' BQt_025 <- lqm.BQt(formula = h110d~vent_vit_moy,
 #'                    data = wave,
-#'                    tau = 0.25,
-#'                    n.iter = 15000)
+#'                    tau = 0.25)
 #'
 #' #---- Get the estimated coefficients
 #' BQt_025$coefficients
@@ -43,20 +42,13 @@
 #'
 lqm.BQt <- function(formula,
                     data,
-                    tau,
+                    tau = 0.5,
                     n.chains = 1,
-                    n.iter = 50000,
+                    n.iter = 10000,
                     n.burnin = 5000,
                     n.thin = 5,
                     n.adapt = 5000,
                     quiet = FALSE){
-
-  # library("rjags")
-  # library("coda")
-  # source("write.model.jags.R")
-  # source("replace.inprod.R")
-  # source("jags_qr.R")
-
 
   # data
   tmp <- data[c(all.vars(formula))]
@@ -76,7 +68,7 @@ lqm.BQt <- function(formula,
   # list of data jags
   jags.data <- list(y = y,
                     X = X,
-                    qt = tau,
+                    tau = tau,
                     ncX = ncX,
                     I = I
                     # ,
@@ -88,16 +80,17 @@ lqm.BQt <- function(formula,
 
   #---- write jags model in txt from R function
   working.directory = getwd()
-  write.model.jags(model="jags_qr",
-                   intitled=file.path(working.directory,"JagsModel.txt"),
-                   Data=jags.data)
+  write.model.jags(model = jags_lqm,
+                   name_model = "jags_lqm",
+                   intitled = file.path(working.directory,"JagsModel.txt"),
+                   Data = jags.data)
 
   # jags argument
   parms_to_save <- c("beta", "sigma")
 
   #---- use JAGS sampler
-  if (!require("rjags"))
-    stop("'rjags' is required.\n")
+  # if (!require("rjags"))
+  #   stop("'rjags' is required.\n")
   JMjags.model <- rjags::jags.model(file = "JagsModel.txt",
                                     data = jags.data,
                                     # inits = list(initial.values),
@@ -122,12 +115,13 @@ lqm.BQt <- function(formula,
   colnames(sims.list$beta) <- colnames(X)
 
   #---- output
-  out <- list(fit = fit,
-              sims.list = sims.list,
-              formula = formula,
-              data = data,
-              tau =tau,
-              call_function = "jags_qr")
+  out <- list(data = data)
+  out$control <- list(fit = fit,
+                      sims.list = sims.list,
+                      formula = formula,
+                      tau =tau,
+                      call_function = "lqm.BQt")
+
   out$CIs <- lapply(sims.list, function(x) if (is.matrix(x))
     apply(x, 2, quantile, probs = c(0.025, 0.975))
     else quantile(x, probs =  c(0.025, 0.975)))

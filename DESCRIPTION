@@ -1,6 +1,6 @@
 Package: BQt
 Type: Package
-Title: BQt: Bayesian Quantile regression joint model
+Title: BQt: Bayesian Quantile regression for joint modeling
 Version: 0.1.0
 Date: 2019-11-20
 Authors@R: c(person("Antoine", "Barbieri", role = c("aut", "cre"), email = "antoine.barbieri@u-bordeaux.fr")) 
@@ -8,11 +8,10 @@ Maintainer: Antoine Barbieri <antoine.barbieri@u-bordeaux.fr>
 Description: BQt package fits quantile regression joint model for time-to-event and longitudinal data.
     Bayesian approach using JAGS and based on asymmetric Laplace distribution is used to estimate each 
     quantile regression model. Large quantile regression models can be estimated such as linear quantile 
-    model, linear quantile mixed models, (multivariate) quantile regression joint model. 
-    git@github.com:AntoineBbi/BQt.git
-Depends: R (>= 3.4.1), rjags, coda
+    model, linear quantile mixed models, (multivariate) quantile regression joint model.
+Depends: R (>= 3.4.1), rjags, coda, lcmm
 SystemRequirements: JAGS (>= 3.2.0)
 License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.0

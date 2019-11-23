@@ -1,0 +1,21 @@
+model
+{
+    c1 <- (1 - 2 * tau)/(tau * (1 - tau))
+    c2 <- 2/(tau * (1 - tau))
+    for (i in 1:I) {
+        for (j in offset[i]:(offset[i + 1] - 1)) {
+            y[j] ~ dnorm(mu[j], prec[j])
+            va1[j] ~ dexp(1/sigma)
+            prec[j] <- 1/(sigma * c2 * va1[j])
+            mu[j] <- inprod(beta[1:ncX], X[j, 1:ncX]) + b[i, 1] * U[j, 1] + b[i, 2] * U[j, 2] + c1 * va1[j]
+        }
+        for (r in 1:ncU) {
+            b[i, r] ~ dnorm(0, prec.Sigma2[r])
+        }
+    }
+    for (rr in 1:ncU) {
+        prec.Sigma2[rr] ~ dgamma(priorA.Sigma2, priorB.Sigma2)
+    }
+    beta[1:ncX] ~ dmnorm(priorMean.beta[], priorTau.beta[, ])
+    sigma ~ dgamma(priorA.sigma, priorB.sigma)
+}

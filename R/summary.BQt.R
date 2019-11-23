@@ -18,10 +18,13 @@ summary.BQt <- function (object, ...)
     stop("Use only with 'BQt' objects.\n")
 
   #---- Global details
-  cat("#-- Statistical Model:", "\n")
-  cat(paste("     - Quantile regression from '", object$call_function), "' function \n")
-  cat(paste("     - Quantile order:", object$tau), "\n")
-  cat(paste("     - Number of observations:", nrow(object$data)), "\n")
+  cat("#-- Statistical model:", "\n")
+  cat(paste("     - Quantile regression from '", object$control$call_function), "' function \n")
+  cat(paste("     - Quantile order: ", object$control$tau), "\n")
+  cat(paste("     - Number of observations: ", nrow(object$data)), "\n")
+  if(object$control$call_function=="lqmm.BQt"){
+    cat(paste("     - Number of statistic units (e.g. subject): ", object$control$I, "\n"))
+  }
   cat("\n")
 
     #---- Parameter Estimations
@@ -31,7 +34,7 @@ summary.BQt <- function (object, ...)
     param_estim <- cbind("Value" = coefs$beta,
                        "2.5%" = CIs$beta[1, ],
                        "97.5%" = CIs$beta[2, ])
-    cat("#-- Estimation of regression parameters: \n")
+    cat("#-- Estimation of regression parameters and credible interval bounds: \n")
     prmatrix(param_estim, na.print = "")
     cat("\n")
     cat("#-- Estimation of sigma parameter associated with asymmetric Laplace distribution: \n")
@@ -41,5 +44,12 @@ summary.BQt <- function (object, ...)
     rownames(sigma_estim) <- "sigma"
     prmatrix(sigma_estim,
              na.print = "")
+
+    # Random effects for "lqmm.BQt" function
+    if(object$control$call_function=="lqmm.BQt"){
+      cat("\n")
+      cat("#-- (Co)variance matrix of the random-effect(s): \n")
+      prmatrix(object$coefficients$Sigma2, na.print = "")
+    }
 
   }

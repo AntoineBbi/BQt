@@ -19,7 +19,7 @@ The function provides a summary of linear quantile regression model (LQRM) estim
 Next, the estimation parameters (posterior median) and bound of the credible interval at 95% are given.
 }
 \seealso{
-\code{\link{jointCureModel.JMcuR}}
+\code{\link{lqm.BQt}}
 }
 \author{
 Antoine Barbieri
