@@ -4,9 +4,20 @@
 \alias{lqmm.BQt}
 \title{\code{lqmm.BQt} fits linear quantile regression model}
 \usage{
-lqmm.BQt(formFixed, formRandom, formGroup, data, tau, RE_ind = FALSE,
-  n.chains = 1, n.iter = 10000, n.burnin = 5000, n.thin = 5,
-  n.adapt = 5000, quiet = FALSE)
+lqmm.BQt(
+  formFixed,
+  formRandom,
+  formGroup,
+  data,
+  tau,
+  RE_ind = FALSE,
+  n.chains = 1,
+  n.iter = 10000,
+  n.burnin = 5000,
+  n.thin = 5,
+  n.adapt = 5000,
+  quiet = FALSE
+)
 }
 \arguments{
 \item{formFixed}{formula for fixed part of longitudinal submodel with response variable}
@@ -32,6 +43,21 @@ lqmm.BQt(formFixed, formRandom, formGroup, data, tau, RE_ind = FALSE,
 \item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is 5000}
 
 \item{quiet}{see rjags package}
+}
+\value{
+A \code{BQt} object which is a list with the following elements:
+ \describe{
+  \item{\code{coefficients}}{list of posterior median for each parameter}
+  \item{\code{modes}}{list of posterior mode for each parameter}
+  \item{\code{StErr}}{list of standard error for each parameter}
+  \item{\code{StDev}}{list of standard deviation for each parameter}
+  \item{\code{ICs}}{list of the credibility interval at 0.95}
+  \item{\code{data}}{data included in argument}
+  \item{\code{sims.list}}{list of the MCMC chains of the parameters excepted random effects}
+  \item{\code{control}}{list of arguments giving details about the estimation}
+  \item{\code{postMeanq}}{data including posterior mean of subject-specific random effects}
+  \item{\code{postVars}}{list of subject-specific random effect covariance matrix}
+ }
 }
 \description{
 Function using JAGS to estimate the linear quantile mixed model assuming asymmetric Laplace

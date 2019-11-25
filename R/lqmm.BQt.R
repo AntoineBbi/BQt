@@ -17,14 +17,18 @@
 #' @param quiet see rjags package
 #'
 #' @return A \code{BQt} object which is a list with the following elements:
-#'
-#'   \item{\code{Coefficients}}{list of posterior median of each parameter}
-#'
-#'   \item{\code{ICs}}{list of the credibility interval at 95%}
-#'
-#'   \item{\code{data}}{data include in argument}
-#'
-#'   \item{\code{sims.list}}{list of the MCMC chains of the parameters}
+#'  \describe{
+#'   \item{\code{coefficients}}{list of posterior median for each parameter}
+#'   \item{\code{modes}}{list of posterior mode for each parameter}
+#'   \item{\code{StErr}}{list of standard error for each parameter}
+#'   \item{\code{StDev}}{list of standard deviation for each parameter}
+#'   \item{\code{ICs}}{list of the credibility interval at 0.95}
+#'   \item{\code{data}}{data included in argument}
+#'   \item{\code{sims.list}}{list of the MCMC chains of the parameters excepted random effects}
+#'   \item{\code{control}}{list of arguments giving details about the estimation}
+#'   \item{\code{postMeanq}}{data including posterior mean of subject-specific random effects}
+#'   \item{\code{postVars}}{list of subject-specific random effect covariance matrix}
+#'  }
 #'
 #'
 #' @author Antoine Barbieri
@@ -33,7 +37,6 @@
 #'
 #' @examples
 #'
-#' \dontrun{
 #' #---- Orthodont data from lqmm package
 #' library(lqmm)
 #' data(Orthodont)
@@ -50,7 +53,6 @@
 #'
 #' #---- Summary of output
 #' summary.BQt(BQt_025)
-#' }
 #'
 lqmm.BQt <- function(formFixed,
                      formRandom,

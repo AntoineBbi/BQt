@@ -16,7 +16,7 @@
 #' @return A \code{BQt} object which is a list with the following elements:
 #'    \describe{
 #'   \item{\code{Coefficients}}{list of posterior median of each parameter}
-#'   \item{\code{ICs}}{list of the credibility interval at 95%}
+#'   \item{\code{ICs}}{list of the credibility interval at 0.95}
 #'   \item{\code{data}}{data include in argument}
 #'   \item{\code{sims.list}}{list of the MCMC chains of the parameters}
 #'    }

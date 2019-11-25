@@ -4,8 +4,17 @@
 \alias{lqm.BQt}
 \title{\code{lqm.BQt} fits linear quantile regression model}
 \usage{
-lqm.BQt(formula, data, tau = 0.5, n.chains = 1, n.iter = 10000,
-  n.burnin = 5000, n.thin = 5, n.adapt = 5000, quiet = FALSE)
+lqm.BQt(
+  formula,
+  data,
+  tau = 0.5,
+  n.chains = 1,
+  n.iter = 10000,
+  n.burnin = 5000,
+  n.thin = 5,
+  n.adapt = 5000,
+  quiet = FALSE
+)
 }
 \arguments{
 \item{formula}{formula for the quantile regression including response variable}
@@ -25,6 +34,15 @@ lqm.BQt(formula, data, tau = 0.5, n.chains = 1, n.iter = 10000,
 \item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is 5000}
 
 \item{quiet}{see rjags package}
+}
+\value{
+A \code{BQt} object which is a list with the following elements:
+   \describe{
+  \item{\code{Coefficients}}{list of posterior median of each parameter}
+  \item{\code{ICs}}{list of the credibility interval at 0.95}
+  \item{\code{data}}{data include in argument}
+  \item{\code{sims.list}}{list of the MCMC chains of the parameters}
+   }
 }
 \description{
 Function using JAGS to estimate the linear quantile regression model assuming asymmetric Laplace
