@@ -20,11 +20,22 @@ summary.BQt <- function (object, ...)
   #---- Global details
   cat("#-- Statistical model:", "\n")
   cat(paste("     - Quantile regression from '", object$control$call_function), "' function \n")
+  if(object$control$call_function=="qrjm.BQt"){
+    if(object$control$param=="sharedRE")
+      cat(paste("        - Association structure in joint model: Shared random effect(s) \n"))
+    if(object$control$param=="value")
+      cat(paste("        - Association structure in joint model: Current quantile of longitudinal process \n"))
+    if(object$control$survMod=="weibull")
+      cat(paste("        - Baseline risk function in survival model: Weibull distribution \n"))
+  }
   cat(paste("     - Quantile order: ", object$control$tau), "\n")
   cat(paste("     - Number of observations: ", nrow(object$data)), "\n")
-  if(object$control$call_function=="lqmm.BQt"){
+  if(object$control$call_function %in% c("lqmm.BQt","qrjm.BQt")){
     cat(paste("     - Number of statistic units (e.g. subject): ", object$control$I, "\n"))
   }
+  # if(object$control$call_function=="qrjm.BQt"){
+  #   cat(paste("     - Number of observed events (e.g. subject): ", sum(object$data$event), "\n"))
+  # }
   cat("\n")
 
     #---- Parameter Estimations
@@ -34,7 +45,7 @@ summary.BQt <- function (object, ...)
     param_estim <- cbind("Value" = coefs$beta,
                        "2.5%" = CIs$beta[1, ],
                        "97.5%" = CIs$beta[2, ])
-    cat("#-- Estimation of regression parameters and credible interval bounds: \n")
+    cat("#-- Estimation of longitudinal regression parameters and their credible interval bounds: \n")
     prmatrix(param_estim, na.print = "")
     cat("\n")
     cat("#-- Estimation of sigma parameter associated with asymmetric Laplace distribution: \n")
@@ -45,11 +56,31 @@ summary.BQt <- function (object, ...)
     prmatrix(sigma_estim,
              na.print = "")
 
-    # Random effects for "lqmm.BQt" function
-    if(object$control$call_function=="lqmm.BQt"){
+    # Random effects for "mixed regression model
+    if(object$control$call_function %in% c("lqmm.BQt","qrjm.BQt")){
       cat("\n")
       cat("#-- (Co)variance matrix of the random-effect(s): \n")
       prmatrix(object$coefficients$Sigma2, na.print = "")
+    }
+
+    # alpha regression parameters
+    if(object$control$call_function=="qrjm.BQt"){
+      cat("\n")
+      param_estim <- cbind("Value" = coefs$alpha,
+                           "2.5%" = CIs$alpha[1, ],
+                           "97.5%" = CIs$alpha[2, ])
+      cat("#-- Estimation of survival parameters and their credible interval bounds: \n")
+      prmatrix(param_estim, na.print = "")
+    }
+
+    # survival structure parameter
+    if(object$control$call_function=="qrjm.BQt" && object$control$survMod=="weibull"){
+      cat("\n")
+      param_estim <- cbind("Value" = coefs$shape,
+                           "2.5%"  = CIs$shape[1],
+                           "97.5%" = CIs$shape[2])
+      cat("#-- Estimation of shape parameters and its credible interval bounds for Weibull model: \n")
+      prmatrix(param_estim, na.print = "")
     }
 
   }
