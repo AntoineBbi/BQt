@@ -297,7 +297,7 @@ qrjm.BQt <- function(formFixed,
                              variable.names = parms_to_save,
                              n.iter = n.iter - n.burnin,
                              thin = n.thin)
-  file.remove(file.path(con$working.directory, "JagsModel.txt"))
+  file.remove(file.path(working.directory, "JagsModel.txt"))
 
   #---- output building
 
