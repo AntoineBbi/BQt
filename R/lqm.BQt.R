@@ -102,6 +102,7 @@ lqm.BQt <- function(formula,
                              variable.names = parms_to_save,
                              n.iter = n.iter - n.burnin,
                              thin = n.thin)
+  file.remove(file.path(working.directory, "JagsModel.txt"))
 
   #---- MCMClist management
   Bs <- do.call(rbind, fit)

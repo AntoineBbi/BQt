@@ -82,7 +82,7 @@ lqmm.BQt <- function(formFixed,
   tmp_model <- lcmm::hlme(fixed = formFixed ,
                           random= formRandom,
                           subject = all.vars(formGroup),
-                          data = data_long)
+                          data = data)
   # prior beta parameters
   priorMean.beta <- tmp_model$best[1:ncol(X)]
   priorTau.beta <- diag(rep(1/100,length(priorMean.beta)))
@@ -149,6 +149,7 @@ lqmm.BQt <- function(formFixed,
                              variable.names = parms_to_save,
                              n.iter = n.iter - n.burnin,
                              thin = n.thin)
+  file.remove(file.path(working.directory, "JagsModel.txt"))
 
   #---- output building
 

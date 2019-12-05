@@ -137,7 +137,7 @@ qrjm.BQt <- function(formFixed,
   tmp_model <- lcmm::hlme(fixed = formFixed ,
                           random= formRandom,
                           subject = all.vars(formGroup),
-                          data = data_long)
+                          data = data)
   # prior beta parameters
   priorMean.beta <- tmp_model$best[1:ncol(X)]
   priorTau.beta <- diag(rep(precision,length(priorMean.beta)))
