@@ -16,7 +16,8 @@ lqmm.BQt(
   n.burnin = 5000,
   n.thin = 5,
   n.adapt = 5000,
-  quiet = FALSE
+  quiet = FALSE,
+  precision = 10
 )
 }
 \arguments{
@@ -43,6 +44,8 @@ lqmm.BQt(
 \item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is 5000}
 
 \item{quiet}{see rjags package}
+
+\item{precision}{variance by default for vague prior distribution}
 }
 \value{
 A \code{BQt} object is a list with the following elements:
@@ -81,6 +84,11 @@ BQt_025$coefficients
 #---- Summary of output
 summary.BQt(BQt_025)
 
+}
+\references{
+Marco Geraci and Matteo Bottai (2014).
+\emph{Linear quantile mixed models}.
+Statistics and Computing, 24(3):461-479. doi: 10.1007/s11222-013-9381-9.
 }
 \author{
 Antoine Barbieri

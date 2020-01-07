@@ -20,6 +20,8 @@
 #' @param n.thin integer specifying the thinning of the chains; default is 1
 #' @param n.adapt integer specifying the number of iterations to use for adaptation; default is 5000
 #' @param quiet see rjags package
+#' @param precision variance by default for vague prior distribution
+#' @param C value used in the zero trick; default is 1000.
 #'
 #' @return A \code{BQt} object is a list with the following elements:
 #'  \describe{
@@ -37,7 +39,7 @@
 #'
 #' @author Antoine Barbieri
 #'
-#' @import rjags lcmm coda joineR
+#' @import rjags coda lqmm survival joineR
 #'
 #' @export
 #'
@@ -85,45 +87,23 @@ qrjm.BQt <- function(formFixed,
                      n.thin = 5,
                      n.adapt = 5000,
                      quiet = FALSE,
+                     precision = 10,
                      C = 1000){
 
   # #
   # #   -- To do
   # #   verify with value.IG
-  # #   propose shared random effects
   # #   add a stopping convergence criteria
-  # #   initialize the values of parameter chaines
+  # #   initialize the values of parameter chains
   # #
   #
-  # data("aids", package = "joineR")
-  #
-  # formFixed = CD4 ~ obstime
-  # formRandom = ~ obstime
-  # formGroup = ~ id
-  # formSurv = Surv(time, death) ~ drug + gender + prevOI + AZT
-  # survMod = "weibull"
-  # param = "sharedRE"
-  # timeVar= "obstime"
-  # data = aids
-  # tau = 0.25
-  # RE_ind = FALSE
-  # n.chains = 1
-  # n.iter = 2000
-  # n.burnin = 1000
-  # n.thin = 1
-  # n.adapt = 5000
-  # quiet = FALSE
-  # C = 1000
-
-
 
   #-- data management
 
   # control
   lag = 0
-  precision <- 1/100
 
-  # longitudinal part
+  #--- longitudinal part
   data_long <- data[unique(c(all.vars(formGroup),all.vars(formFixed),all.vars(formRandom)))]
   y <- data_long[all.vars(formFixed)][, 1]
   mfX <- model.frame(formFixed, data = data_long)
@@ -133,14 +113,22 @@ qrjm.BQt <- function(formFixed,
   id <- as.integer(data_long[all.vars(formGroup)][,1])
   offset <- as.vector(c(1, 1 + cumsum(tapply(id, id, length))))
   I <- length(unique(id))
-  # use lcmm function to initiated values
-  tmp_model <- lcmm::hlme(fixed = formFixed ,
-                          random= formRandom,
-                          subject = all.vars(formGroup),
-                          data = data)
+  # use lqmm function to initiated values
+  cat("> Initiation of longitudinal parameter values using 'lqmm' package. \n")
+  tmp_model <- lqmm::lqmm(fixed = formFixed,
+                          random = formRandom,
+                          group = id,
+                          tau = tau,
+                          data = data_long)
   # prior beta parameters
-  priorMean.beta <- tmp_model$best[1:ncol(X)]
-  priorTau.beta <- diag(rep(precision,length(priorMean.beta)))
+  priorMean.beta <- coef(tmp_model)
+  priorTau.beta <- diag(rep(1/10,length(priorMean.beta)))
+
+  bis <- as.matrix(ranef(tmp_model))
+  bis[abs(bis)<.0001] <- 0
+  initial.values <- list(b = bis,
+                         beta = priorMean.beta,
+                         sigma = tmp_model$scale)
 
   # list of data jags
   jags.data <- list(y = y,
@@ -153,28 +141,30 @@ qrjm.BQt <- function(formFixed,
                     offset = offset,
                     priorMean.beta = priorMean.beta,
                     priorTau.beta = priorTau.beta,
-                    priorA.sigma = precision,
-                    priorB.sigma = precision
+                    priorA.sigma = 1/precision,
+                    priorB.sigma = 1/precision
                     )
 
   if(jags.data$ncU==1)
     RE_ind <- TRUE
   if(RE_ind){
     jags.data <- c(jags.data,
-                   list(priorA.Sigma2 = precision,
-                        priorB.Sigma2 = precision
+                   list(priorA.Sigma2 = 1/precision,
+                        priorB.Sigma2 = 1/precision
                    )
     )
+    initial.values$prec.Sigma2 <- 1/VarCorr(tmp_model)
   }else{
     jags.data <- c(jags.data,
-                   list(priorR.Sigma2 = diag(rep(precision, ncol(U))),
+                   list(priorR.Sigma2 = diag(rep(1/precision, ncol(U))),
                         priorK.Sigma2 = ncol(U),
                         mu0 = rep(0, ncol(U))
                    )
     )
+    initial.values$prec.Sigma2 <- diag(1/VarCorr(tmp_model))
   }
 
-  # survival part
+  #--- survival part
   tmp <- data[c(all.vars(formGroup),all.vars(formSurv))]
   tmp <- unique(tmp)
   Time <- tmp[all.vars(formSurv)][, 1]    # matrix of observed time such as Time=min(Tevent,Tcens)
@@ -184,9 +174,14 @@ qrjm.BQt <- function(formFixed,
   # design matrice
   mfZ <- model.frame(formSurv, data = tmp)
   Z <- model.matrix(formSurv, mfZ)
-  # fill the jags data
-  priorMean.alpha <- rep(0, ncol(Z))
-  priorTau.alpha <- diag(rep(precision, ncol(Z)))
+  # use lqmm function to initiated values
+  cat("> Initiation of survival parameter values using 'survival' package. \n")
+  tmp_model <- survival::coxph(formSurv,
+                               data = tmp,
+                               x = TRUE)
+  # Complete the jags data
+  priorMean.alpha <- c(0, tmp_model$coefficients)
+  priorTau.alpha <- diag(c(1/precision, 1/(precision*diag(tmp_model$var))))
   jags.data <- c(jags.data,
                  list(C = C,
                       zeros = numeric(nTime),
@@ -196,8 +191,16 @@ qrjm.BQt <- function(formFixed,
                       ncZ = ncol(Z),
                       priorMean.alpha = priorMean.alpha,
                       priorTau.alpha = priorTau.alpha,
-                      priorTau.alphaA = precision)
+                      priorTau.alphaA = 1/precision)
                  )
+  # initialisation values of survival parameters
+  initial.values$alpha <- c(0, tmp_model$coefficients)
+  if(param=="weibull")
+    initial.values$shape <- 1
+  if(param=="value")
+    initial.values$alpha.assoc <- 0
+  if(param=="sharedRE")
+    initial.values$alpha.assoc <- rep(0, ncol(U))
 
   #--- shared current value case
   data.id <- data_long[!duplicated(id), ]
@@ -268,7 +271,7 @@ qrjm.BQt <- function(formFixed,
 
   # complement given survMod
   if(survMod == "weibull"){
-    jags.data <- c(jags.data, list(priorA.shape = precision, priorB.shape = precision))
+    jags.data <- c(jags.data, list(priorA.shape = 1/precision, priorB.shape = 1/precision))
     parms_to_save <- c(parms_to_save, "shape")
   }
 
@@ -288,7 +291,7 @@ qrjm.BQt <- function(formFixed,
   #---- use JAGS sampler
   JMjags.model <- rjags::jags.model(file = "JagsModel.txt",
                                     data = jags.data,
-                                    # inits = list(initial.values),
+                                    inits = initial.values,
                                     n.chains = n.chains,
                                     n.adapt = n.adapt,
                                     quiet = quiet)

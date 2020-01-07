@@ -15,6 +15,7 @@
 #' @param n.thin integer specifying the thinning of the chains; default is 1
 #' @param n.adapt integer specifying the number of iterations to use for adaptation; default is 5000
 #' @param quiet see rjags package
+#' @param precision variance by default for vague prior distribution
 #'
 #' @return A \code{BQt} object is a list with the following elements:
 #'  \describe{
@@ -33,7 +34,11 @@
 #
 #' @author Antoine Barbieri
 #'
-#' @import rjags lcmm coda lqmm
+#' @import rjags coda lqmm
+#'
+#' @references Marco Geraci and Matteo Bottai (2014).
+#' \emph{Linear quantile mixed models}.
+#' Statistics and Computing, 24(3):461-479. doi: 10.1007/s11222-013-9381-9.
 #'
 #' @export
 #'
@@ -66,7 +71,10 @@ lqmm.BQt <- function(formFixed,
                      n.burnin = 5000,
                      n.thin = 5,
                      n.adapt = 5000,
-                     quiet = FALSE){
+                     quiet = FALSE,
+                     precision = 10){
+
+  # To do: improve chain convergence.
 
   #-- data management
   data_long <- data[unique(c(all.vars(formGroup),all.vars(formFixed),all.vars(formRandom)))]
@@ -76,16 +84,26 @@ lqmm.BQt <- function(formFixed,
   mfU <- model.frame(formRandom, data = data_long)
   U <- model.matrix(formRandom, mfU)
   id <- as.integer(data_long[all.vars(formGroup)][,1])
+  if(!("id" %in% colnames(data_long)))
+    data_long <- cbind(data_long, id = id)
   offset <- as.vector(c(1, 1 + cumsum(tapply(id, id, length))))
   I <- length(unique(id))
-  # use lcmm function to initiated values
-  tmp_model <- lcmm::hlme(fixed = formFixed ,
-                          random= formRandom,
-                          subject = all.vars(formGroup),
-                          data = data)
+  # use lqmm function to initiated values
+  cat("Initiation of parameter values using lqmm package. \n")
+  tmp_model <- lqmm::lqmm(fixed = formFixed,
+                          random = formRandom,
+                          group = id,
+                          tau = tau,
+                          data = data_long)
   # prior beta parameters
-  priorMean.beta <- tmp_model$best[1:ncol(X)]
-  priorTau.beta <- diag(rep(1/100,length(priorMean.beta)))
+  priorMean.beta <- coef(tmp_model)
+  priorTau.beta <- diag(rep(1/10,length(priorMean.beta)))
+
+  bis <- as.matrix(ranef(tmp_model))
+  bis[abs(bis)<.0001] <- 0
+  initial.values <- list(b = bis,
+                         beta = priorMean.beta,
+                         sigma = tmp_model$scale)
 
   # list of data jags
   jags.data <- list(y = y,
@@ -98,25 +116,26 @@ lqmm.BQt <- function(formFixed,
                     offset = offset,
                     priorMean.beta = priorMean.beta,
                     priorTau.beta = priorTau.beta,
-                    priorA.sigma = 1/10,
-                    priorB.sigma = 1/10
+                    priorA.sigma = 1/precision,
+                    priorB.sigma = 1/precision
                     )
 
   if(jags.data$ncU==1)
     RE_ind <- TRUE
   if(RE_ind){
     jags.data <- c(jags.data,
-                   list(priorA.Sigma2 = 1/10,
-                        priorB.Sigma2 = 1/10
+                   list(priorA.Sigma2 = 1/precision,
+                        priorB.Sigma2 = 1/precision)
                    )
-    )
+    initial.values$prec.Sigma2 <- 1/VarCorr(tmp_model)
   }else{
     jags.data <- c(jags.data,
-                   list(priorR.Sigma2 = diag(rep(1/10, ncol(U))),
+                   list(priorR.Sigma2 = diag(rep(1/precision, ncol(U))),
                         priorK.Sigma2 = ncol(U),
                         mu0 = rep(0, ncol(U))
+                        )
                    )
-    )
+    initial.values$prec.Sigma2 <- diag(1/VarCorr(tmp_model))
   }
   model <- switch(paste(RE_ind, sep = "/"),
                   # wishart distribution when more than one RE is considered
@@ -140,7 +159,7 @@ lqmm.BQt <- function(formFixed,
   #   stop("'rjags' is required.\n")
   JMjags.model <- rjags::jags.model(file = "JagsModel.txt",
                                     data = jags.data,
-                                    # inits = list(initial.values),
+                                    inits = initial.values,
                                     n.chains = n.chains,
                                     n.adapt = n.adapt,
                                     quiet = quiet)

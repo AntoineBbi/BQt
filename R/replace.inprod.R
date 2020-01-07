@@ -1,12 +1,18 @@
 replace.inprod <-
   function (body.model, name_model, Data, param) {
     mt <- deparse(body.model, width.cutoff = 200L)
-    # regression from X
-    ncX <- Data$ncX
-    rplc <- paste(paste("beta[", 1:ncX, "] * X[i, ", 1:ncX, "]", sep = ""), collapse = " + ")
-    mt <- gsub("inprod(beta[1:ncX], X[i, 1:ncX])", rplc, mt, fixed = TRUE)
-    # regression on random effects U
+    if(name_model == "jags_lqm"){
+      # regression from X
+      ncX <- Data$ncX
+      rplc <- paste(paste("beta[", 1:ncX, "] * X[i, ", 1:ncX, "]", sep = ""), collapse = " + ")
+      mt <- gsub("inprod(beta[1:ncX], X[i, 1:ncX])", rplc, mt, fixed = TRUE)
+    }
     if(name_model != "jags_lqm"){
+      # regression from X
+      ncX <- Data$ncX
+      rplc <- paste(paste("beta[", 1:ncX, "] * X[j, ", 1:ncX, "]", sep = ""), collapse = " + ")
+      mt <- gsub("inprod(beta[1:ncX], X[j, 1:ncX])", rplc, mt, fixed = TRUE)
+      # regression on random effects U
       ncU <- Data$ncU
       rplc <- paste(paste("b[i, ", 1:ncU, "] * U[j, ", 1:ncU, "]", sep = ""), collapse = " + ")
       mt <- gsub("inprod(b[i, 1:ncU], U[j, 1:ncU])", rplc, mt, fixed = TRUE)

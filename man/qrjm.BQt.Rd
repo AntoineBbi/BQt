@@ -21,6 +21,7 @@ qrjm.BQt(
   n.thin = 5,
   n.adapt = 5000,
   quiet = FALSE,
+  precision = 10,
   C = 1000
 )
 }
@@ -56,6 +57,10 @@ qrjm.BQt(
 \item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is 5000}
 
 \item{quiet}{see rjags package}
+
+\item{precision}{variance by default for vague prior distribution}
+
+\item{C}{value used in the zero trick; default is 1000.}
 }
 \value{
 A \code{BQt} object is a list with the following elements:
