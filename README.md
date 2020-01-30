@@ -1,6 +1,6 @@
 # BQt package for R
 
-Joint Modeling for longitudinal and time-to-event data using linear quantile mixed model in Bayesian framework
+BQt is a R-package dealing the quantile regression in Bayesian framework. Based on the asymmetric Laplace distribution, it allows to estimate joint models for longitudinal and time-to-event data, linear mixed effects models and simple linear models.
 
 To try the current development version from github, use:
 
