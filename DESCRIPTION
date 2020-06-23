@@ -9,9 +9,9 @@ Description: BQt package fits quantile regression joint model for time-to-event 
     Bayesian approach using JAGS and based on asymmetric Laplace distribution is used to estimate each 
     quantile regression model. Large quantile regression models can be estimated such as linear quantile 
     model, linear quantile mixed models, (multivariate) quantile regression joint model.
-Depends: R (>= 3.4.1), rjags, coda, lqmm, survival
+Depends: R (>= 3.4.1), rjags, coda, lqmm, survival, jagsUI
 SystemRequirements: JAGS (>= 3.2.0)
 License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.0.1
+RoxygenNote: 7.1.0
