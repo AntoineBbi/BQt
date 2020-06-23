@@ -58,7 +58,7 @@ A \code{BQt} object is a list with the following elements:
   \item{\code{data}}{data included in argument}
   \item{\code{sims.list}}{list of the MCMC chains of the parameters excepted random effects}
   \item{\code{control}}{list of arguments giving details about the estimation}
-  \item{\code{postMeanq}}{data including posterior mean of subject-specific random effects}
+  \item{\code{postMeans}}{data including posterior mean of subject-specific random effects}
   \item{\code{postVars}}{list of subject-specific random effect covariance matrix}
  }
 }
@@ -76,7 +76,9 @@ BQt_025 <- lqmm.BQt(formFixed = distance ~ age,
                     formRandom = ~ age,
                     formGroup = ~ Subject,
                     data = Orthodont,
-                    tau = 0.25)
+                    tau = 0.25,
+                    n.iter = 1000,
+                    n.burnin = 500)
 
 #---- Get the estimated coefficients
 BQt_025$coefficients

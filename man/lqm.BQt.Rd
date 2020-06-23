@@ -11,7 +11,7 @@ lqm.BQt(
   n.chains = 1,
   n.iter = 10000,
   n.burnin = 5000,
-  n.thin = 5,
+  n.thin = 1,
   n.adapt = 5000,
   quiet = FALSE
 )

@@ -94,7 +94,7 @@ qrjm.BQt <- function(formFixed,
   # #   -- To do
   # #   verify with value.IG
   # #   add a stopping convergence criteria
-  # #   initialize the values of parameter chains
+  # #   initialize the values of parameter chains and to fix the intercept to test the convergence of beta's parameter.
   # #
   #
 

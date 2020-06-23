@@ -7,7 +7,7 @@ replace.inprod <-
       rplc <- paste(paste("beta[", 1:ncX, "] * X[i, ", 1:ncX, "]", sep = ""), collapse = " + ")
       mt <- gsub("inprod(beta[1:ncX], X[i, 1:ncX])", rplc, mt, fixed = TRUE)
     }
-    if(name_model != "jags_lqm"){
+    if(name_model %in% c("jags_lqmm","jags_qrjm")){
       # regression from X
       ncX <- Data$ncX
       rplc <- paste(paste("beta[", 1:ncX, "] * X[j, ", 1:ncX, "]", sep = ""), collapse = " + ")
@@ -39,6 +39,12 @@ replace.inprod <-
         mt <- gsub("inprod(alpha.assoc[1:ncU], b[i, 1:ncU])", rplc, mt, fixed = TRUE)
       }
     }
+    # if(name_model == "jags_mlqmm"){
+    #   # regression from X
+    #   ncX <- Data$ncX
+    #   rplc <- paste(paste("beta[", 1:ncX, ", qq] * X[j, ", 1:ncX, "]", sep = ""), collapse = " + ")
+    #   mt <- gsub("inprod(beta[1:ncX, qq], X[j, 1:ncX])", rplc, mt, fixed = TRUE)
+    # }
     # end
     c("model", mt)
   }

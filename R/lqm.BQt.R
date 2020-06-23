@@ -46,7 +46,7 @@ lqm.BQt <- function(formula,
                     n.chains = 1,
                     n.iter = 10000,
                     n.burnin = 5000,
-                    n.thin = 5,
+                    n.thin = 1,
                     n.adapt = 5000,
                     quiet = FALSE){
 
@@ -86,7 +86,7 @@ lqm.BQt <- function(formula,
                    Data = jags.data)
 
   # jags argument
-  parms_to_save <- c("beta", "sigma")
+  parms_to_save <- c("beta", "sigma", "va1")
 
   #---- use JAGS sampler
   # if (!require("rjags"))
@@ -112,6 +112,7 @@ lqm.BQt <- function(formula,
     ii <- grep(paste("^", parms_to_save[p], sep = ""), colnames(Bs))
     sims.list[[p]] <- Bs[, ii]
   }
+  W_var_aux = sims.list$va1
   sims.list <- list(beta = sims.list$beta, sigma = sims.list$sigma)
   colnames(sims.list$beta) <- colnames(X)
 
@@ -122,6 +123,8 @@ lqm.BQt <- function(formula,
                       formula = formula,
                       tau =tau,
                       call_function = "lqm.BQt")
+
+  out$W_var_aux <- W_var_aux
 
   out$CIs <- lapply(sims.list, function(x) if (is.matrix(x))
     apply(x, 2, quantile, probs = c(0.025, 0.975))
