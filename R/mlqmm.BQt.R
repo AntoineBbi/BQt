@@ -281,7 +281,7 @@ mlqmm.BQt <- function(formFixed,
   out$median$b <- NULL
 
   # mean : Posterior mean of parameters (if mean, you can use mean instead of q50)
-  out$mean <- out_jags$q50
+  out$mean <- out_jags$mean
   out$mean$b <- NULL
 
   # # if inverse in jags doesn't run
