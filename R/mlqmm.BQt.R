@@ -18,7 +18,7 @@
 #' @param n.iter integer specifying the total number of iterations; default is 10000
 #' @param n.burnin integer specifying how many of n.iter to discard as burn-in ; default is 5000
 #' @param n.thin integer specifying the thinning of the chains; default is 1
-#' @param n.adapt integer specifying the number of iterations to use for adaptation; default is 5000
+#' @param n.adapt integer specifying the number of iterations to use for adaptation; default is NULL
 #' @param precision variance by default for vague prior distribution
 #' @param save_jagsUI If TRUE (by default), the output of jagsUI package is return by the function
 #' @param parallel see jagsUI::jags() function
@@ -219,17 +219,24 @@ mlqmm.BQt <- function(formFixed,
   # if (!require("rjags"))
   #   stop("'rjags' is required.\n")
 
+  if(n.chains==3)
+    inits <- list(initial.values,
+                  initial.values,
+                  initial.values)
+  if(n.chains==2)
+    inits <- list(initial.values,
+                  initial.values)
+  if(n.chains==1)
+    inits <- initial.values
+
   # using jagsUI
   out_jags = jagsUI::jags(data = jags.data,
                           parameters.to.save = parms_to_save,
                           model.file = "JagsModel.txt",
-                          inits = list(initial.values,
-                                       initial.values,
-                                       initial.values),
-                          # inits = initial.values,
+                          inits = inits,
                           n.chains = n.chains,
                           parallel = parallel,
-                          # n.adapt = n.adapt,
+                          n.adapt = n.adapt,
                           n.iter = n.iter,
                           n.burnin = n.burnin,
                           n.thin = n.thin,
@@ -321,24 +328,34 @@ mlqmm.BQt <- function(formFixed,
       else f(x)
     }
   })
+
   # standard deviation of parameters
   out$StDev <- out_jags$sd
   out$StDev$b <- NULL
+
+
+  # Rhat : Gelman & Rubin diagnostic
+  out$Rhat <- out_jags$Rhat
+  out$Rhat$b <- NULL
+
   # names
   colnames(out$mean$beta) <-
     colnames(out$median$beta) <-
     colnames(out$modes$beta) <-
     colnames(out$StErr$beta) <-
+    colnames(out$Rhat$beta) <-
     colnames(out$StDev$beta) <- colnames(X)
   rownames(out$mean$beta) <-
     rownames(out$median$beta) <-
     rownames(out$modes$beta) <-
     rownames(out$StErr$beta) <-
+    rownames(out$Rhat$beta) <-
     rownames(out$StDev$beta) <- paste("tau", as.character(tau*100), sep = "")
   rownames(out$mean$sigma) <-
     rownames(out$median$sigma) <-
     rownames(out$modes$sigma) <-
     rownames(out$StErr$sigma) <-
+    rownames(out$Rhat$sigma) <-
     rownames(out$StDev$sigma) <- paste("tau", as.character(tau*100), sep = "")
 
   colnames(out$mean$covariance.b) <-
@@ -349,6 +366,8 @@ mlqmm.BQt <- function(formFixed,
     rownames(out$modes$covariance.b) <-
     colnames(out$StErr$covariance.b) <-
     rownames(out$StErr$covariance.b) <-
+    colnames(out$Rhat$covariance.b) <-
+    rownames(out$Rhat$covariance.b) <-
     colnames(out$StDev$covariance.b) <-
     rownames(out$StDev$covariance.b) <- paste(rep(paste("tau", as.character(tau*100), sep = ""),
                                                   each = ncU),
