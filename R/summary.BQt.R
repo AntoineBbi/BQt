@@ -1,16 +1,16 @@
 #' Summary of a \code{BQt} objects
 #'
-#' The function provides a summary of linear quantile regression model (LQRM) estimations. First, LQRM's details are given.
-#' Next, the estimation parameters (posterior median) and bound of the credible interval at 95% are given.
+#' The function provides a summary of BQt object (lqm, lqmm, qrjm, mlqmm).
+#' Therfore, the estimation parameters (posterior mean) and bounds of the credible interval at 95% and Gelman & Rubin diagnostic are given.
 #'
-#' @param object an object inheriting from class 'JMcuR'
+#' @param object an object inheriting from class 'BQt'
 #' @param ... further arguments to be passed to or from other methods. They are ignored in this function.
 #'
 #' @return Returns NULL.
 #'
 #' @author Antoine Barbieri
 #'
-#' @seealso \code{\link{lqm.BQt}}
+#' @seealso \code{\link{lqm.BQt}}, \code{\link{lqmm.BQt}}, \code{\link{mlqmm.BQt}}, \code{\link{qrjm.BQt}}
 #'
 summary.BQt <- function (object, ...)
   {
@@ -28,59 +28,90 @@ summary.BQt <- function (object, ...)
     if(object$control$survMod=="weibull")
       cat(paste("        - Baseline risk function in survival model: Weibull distribution \n"))
   }
-  cat(paste("     - Quantile order: ", object$control$tau), "\n")
+  if(object$control$call_function=="mlqmm.BQt"){
+    if(object$control$corr_structure=="free")
+      cat(paste("        - Correlation structure:  'Free' \n"))
+    if(object$control$corr_structure=="middle")
+      cat(paste("        - Correlation structure:  'middle' autoregressive structure based on quantiles'order distance \n"))
+    if(object$control$corr_structure=="none")
+      cat(paste("        - Correlation structure: only through covariance matrix of random effects  \n"))
+  }
+  cat(paste("     - Quantile order(s): ", object$control$tau), "\n")
   cat(paste("     - Number of observations: ", nrow(object$data)), "\n")
-  if(object$control$call_function %in% c("lqmm.BQt","qrjm.BQt")){
+  if(object$control$call_function %in% c("lqmm.BQt","qrjm.BQt", "mlqmm.BQt")){
     cat(paste("     - Number of statistic units (e.g. subject): ", object$control$I, "\n"))
   }
-  # if(object$control$call_function=="qrjm.BQt"){
-  #   cat(paste("     - Number of observed events (e.g. subject): ", sum(object$data$event), "\n"))
-  # }
+  if(object$control$call_function=="qrjm.BQt"){
+    cat(paste("     - Number of observed events: ", sum(object$control$event), "\n"))
+  }
   cat("\n")
 
     #---- Parameter Estimations
-    coefs <- object$coefficients
+    coefs <- object$mean
     CIs <- object$CIs
+    Rhat <- object$Rhat
     # beta regression parameters
     param_estim <- cbind("Value" = coefs$beta,
                        "2.5%" = CIs$beta[1, ],
-                       "97.5%" = CIs$beta[2, ])
+                       "97.5%" = CIs$beta[2, ],
+                       "Rhat" = Rhat$beta)
     cat("#-- Estimation of longitudinal regression parameters and their credible interval bounds: \n")
     prmatrix(param_estim, na.print = "")
     cat("\n")
     cat("#-- Estimation of sigma parameter associated with asymmetric Laplace distribution: \n")
     sigma_estim <- cbind("Value" = coefs$sigma,
                          "2.5%" = CIs$sigma[1],
-                         "97.5%" = CIs$sigma[2])
+                         "97.5%" = CIs$sigma[2],
+                         "Rhat" = Rhat$sigma)
     rownames(sigma_estim) <- "sigma"
-    prmatrix(sigma_estim,
-             na.print = "")
+    prmatrix(sigma_estim, na.print = "")
 
     # Random effects for "mixed regression model
     if(object$control$call_function %in% c("lqmm.BQt","qrjm.BQt")){
       cat("\n")
       cat("#-- (Co)variance matrix of the random-effect(s): \n")
-      prmatrix(object$coefficients$Sigma2, na.print = "")
+      if(object$control$RE_ind){
+        tmp <- diag(object$mean$covariance.b)
+        colnames(tmp) <- rownames(tmp) <- names(object$mean$covariance.b)
+        prmatrix(tmp, na.print = "")
+
+      }
+      if(!object$control$RE_ind)
+        prmatrix(object$mean$covariance.b, na.print = "")
     }
 
+    # survival parameters
     # alpha regression parameters
     if(object$control$call_function=="qrjm.BQt"){
+      # survival structure parameter
+      if(object$control$survMod=="weibull"){
+        param_estim1 <- cbind("Value" = object$mean$shape,
+                              "2.5%"  = object$CIs$shape[1],
+                              "97.5%" = object$CIs$shape[2],
+                              "Rhat" = object$Rhat$shape)
+        rownames(param_estim1) <- "shape"
+      }
+      # alpha parameters
+      param_estim2 <- cbind("Value" = object$mean$alpha,
+                            "2.5%" = object$CIs$alpha[, 1],
+                            "97.5%" = object$CIs$alpha[, 2],
+                            "Rhat" = object$Rhat$alpha)
+      # association parameters
+      if(length(object$mean$alpha.assoc)==1)
+        param_estim3 <- cbind("Value" = object$mean$alpha.assoc,
+                              "2.5%" = object$CIs$alpha.assoc[1],
+                              "97.5%" = object$CIs$alpha.assoc[2],
+                              "Rhat" = object$Rhat$alpha.assoc)
+      else
+        param_estim3 <- cbind("Value" = object$mean$alpha.assoc,
+                              "2.5%" = object$CIs$alpha.assoc[, 1],
+                              "97.5%" = object$CIs$alpha.assoc[, 2],
+                              "Rhat" = object$Rhat$alpha.assoc)
+      rownames(param_estim3) <- rep("alpha.assoc", length(object$mean$alpha.assoc))
+      # Print
       cat("\n")
-      param_estim <- cbind("Value" = coefs$alpha,
-                           "2.5%" = CIs$alpha[1, ],
-                           "97.5%" = CIs$alpha[2, ])
-      cat("#-- Estimation of survival parameters and their credible interval bounds: \n")
-      prmatrix(param_estim, na.print = "")
-    }
-
-    # survival structure parameter
-    if(object$control$call_function=="qrjm.BQt" && object$control$survMod=="weibull"){
-      cat("\n")
-      param_estim <- cbind("Value" = coefs$shape,
-                           "2.5%"  = CIs$shape[1],
-                           "97.5%" = CIs$shape[2])
-      cat("#-- Estimation of shape parameters and its credible interval bounds for Weibull model: \n")
-      prmatrix(param_estim, na.print = "")
+      cat("#-- Estimation of survival models: \n")
+      prmatrix(rbind(param_estim1, param_estim2, param_estim3), na.print = "")
     }
 
   }
