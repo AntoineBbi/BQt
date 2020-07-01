@@ -15,14 +15,15 @@ qrjm.BQt(
   data,
   tau,
   RE_ind = FALSE,
-  n.chains = 1,
+  n.chains = 3,
   n.iter = 10000,
   n.burnin = 5000,
   n.thin = 5,
   n.adapt = 5000,
-  quiet = FALSE,
   precision = 10,
-  C = 1000
+  C = 1000,
+  save_jagsUI = TRUE,
+  parallel = FALSE
 )
 }
 \arguments{
@@ -56,30 +57,34 @@ qrjm.BQt(
 
 \item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is 5000}
 
-\item{quiet}{see rjags package}
-
 \item{precision}{variance by default for vague prior distribution}
 
 \item{C}{value used in the zero trick; default is 1000.}
+
+\item{save_jagsUI}{If TRUE (by default), the output of jagsUI package is return by the function}
+
+\item{parallel}{see jagsUI::jags() function}
 }
 \value{
 A \code{BQt} object is a list with the following elements:
  \describe{
-  \item{\code{coefficients}}{list of posterior median for each parameter}
+  \item{\code{mean}}{list of posterior mean for each parameter}
+  \item{\code{median}}{list of posterior median for each parameter}
   \item{\code{modes}}{list of posterior mode for each parameter}
   \item{\code{StErr}}{list of standard error for each parameter}
   \item{\code{StDev}}{list of standard deviation for each parameter}
-  \item{\code{ICs}}{list of the credibility interval at 0.95}
+  \item{\code{ICs}}{list of the credibility interval at 0.95 for each parameters excepted for covariance parameters in covariance matrix of random effects. Otherwise, use save_jagsUI=TRUE to have the associated quantiles.}
   \item{\code{data}}{data included in argument}
-  \item{\code{sims.list}}{list of the MCMC chains of the parameters excepted random effects}
+  \item{\code{sims.list}}{list of the MCMC chains of the parameters and random effects}
   \item{\code{control}}{list of arguments giving details about the estimation}
-  \item{\code{postMeanq}}{data including posterior mean of subject-specific random effects}
-  \item{\code{postVars}}{list of subject-specific random effect covariance matrix}
+  \item{\code{random_effect}}{list for each quantile including both posterior mean and posterior standard deviation of subject-specific random effects}
+  \item{\code{out_jagsUI}}{only if \code{save_jagsUI=TRUE} in argument: list including posterior mean, median, quantiles (2.5%, 25%, 50%, 75%, 97.5%), standart deviation for each parameter and each random effect.
+  Moreover, this list also returns the MCMC draws, the Gelman and Rubin diagnostics (see output of jagsUI objects)}
  }
 }
 \description{
-Function using JAGS to estimate the quantile regression joint model assuming asymmetric Laplace distribution for residual error.
-Joint modeling concers longitudinal data and time-to-event
+Function using JAGS via jagsUI package to estimate the quantile regression joint model assuming asymmetric Laplace distribution for residual error.
+Joint modeling concerns longitudinal data and time-to-event
 }
 \examples{
 
@@ -98,11 +103,14 @@ qrjm_25 <- qrjm.BQt(formFixed = CD4 ~ obstime,
                     data = aids,
                     tau = 0.25)
 
+#---- Visualize the trace for beta parameters
+jagsUI::traceplot(qrjm_25$out_jagsUI,parameters = "beta" )
+
 #---- Get the estimated coefficients
 qrjm_25$coefficients
 
 #---- Summary of output
-summary.BQt(qrjm_25)
+BQt::summary.BQt(qrjm_25)
 }
 
 }

@@ -1,7 +1,7 @@
 #' \code{qrjm.BQt} fits quantile regression joint model
 #'
-#' Function using JAGS to estimate the quantile regression joint model assuming asymmetric Laplace distribution for residual error.
-#' Joint modeling concers longitudinal data and time-to-event
+#' Function using JAGS via jagsUI package to estimate the quantile regression joint model assuming asymmetric Laplace distribution for residual error.
+#' Joint modeling concerns longitudinal data and time-to-event
 #'
 #'
 #' @param formFixed formula for fixed part of longitudinal submodel with response variable
@@ -19,27 +19,31 @@
 #' @param n.burnin integer specifying how many of n.iter to discard as burn-in ; default is 5000
 #' @param n.thin integer specifying the thinning of the chains; default is 1
 #' @param n.adapt integer specifying the number of iterations to use for adaptation; default is 5000
-#' @param quiet see rjags package
 #' @param precision variance by default for vague prior distribution
 #' @param C value used in the zero trick; default is 1000.
+#' @param save_jagsUI If TRUE (by default), the output of jagsUI package is return by the function
+#' @param parallel see jagsUI::jags() function
+#'
 #'
 #' @return A \code{BQt} object is a list with the following elements:
 #'  \describe{
-#'   \item{\code{coefficients}}{list of posterior median for each parameter}
+#'   \item{\code{mean}}{list of posterior mean for each parameter}
+#'   \item{\code{median}}{list of posterior median for each parameter}
 #'   \item{\code{modes}}{list of posterior mode for each parameter}
 #'   \item{\code{StErr}}{list of standard error for each parameter}
 #'   \item{\code{StDev}}{list of standard deviation for each parameter}
-#'   \item{\code{ICs}}{list of the credibility interval at 0.95}
+#'   \item{\code{ICs}}{list of the credibility interval at 0.95 for each parameters excepted for covariance parameters in covariance matrix of random effects. Otherwise, use save_jagsUI=TRUE to have the associated quantiles.}
 #'   \item{\code{data}}{data included in argument}
-#'   \item{\code{sims.list}}{list of the MCMC chains of the parameters excepted random effects}
+#'   \item{\code{sims.list}}{list of the MCMC chains of the parameters and random effects}
 #'   \item{\code{control}}{list of arguments giving details about the estimation}
-#'   \item{\code{postMeanq}}{data including posterior mean of subject-specific random effects}
-#'   \item{\code{postVars}}{list of subject-specific random effect covariance matrix}
+#'   \item{\code{random_effect}}{list for each quantile including both posterior mean and posterior standard deviation of subject-specific random effects}
+#'   \item{\code{out_jagsUI}}{only if \code{save_jagsUI=TRUE} in argument: list including posterior mean, median, quantiles (2.5%, 25%, 50%, 75%, 97.5%), standart deviation for each parameter and each random effect.
+#'   Moreover, this list also returns the MCMC draws, the Gelman and Rubin diagnostics (see output of jagsUI objects)}
 #'  }
 #'
 #' @author Antoine Barbieri
 #'
-#' @import rjags coda lqmm survival joineR
+#' @import jagsUI lqmm survival
 #'
 #' @export
 #'
@@ -64,11 +68,14 @@
 #'                     data = aids,
 #'                     tau = 0.25)
 #'
+#' #---- Visualize the trace for beta parameters
+#' jagsUI::traceplot(qrjm_25$out_jagsUI,parameters = "beta" )
+#'
 #' #---- Get the estimated coefficients
 #' qrjm_25$coefficients
 #'
 #' #---- Summary of output
-#' summary.BQt(qrjm_25)
+#' BQt::summary.BQt(qrjm_25)
 #' }
 #'
 qrjm.BQt <- function(formFixed,
@@ -81,14 +88,15 @@ qrjm.BQt <- function(formFixed,
                      data,
                      tau,
                      RE_ind = FALSE,
-                     n.chains = 1,
+                     n.chains = 3,
                      n.iter = 10000,
                      n.burnin = 5000,
                      n.thin = 5,
                      n.adapt = 5000,
-                     quiet = FALSE,
                      precision = 10,
-                     C = 1000){
+                     C = 1000,
+                     save_jagsUI = TRUE,
+                     parallel = FALSE){
 
   # #
   # #   -- To do
@@ -124,7 +132,7 @@ qrjm.BQt <- function(formFixed,
   priorMean.beta <- coef(tmp_model)
   priorTau.beta <- diag(rep(1/10,length(priorMean.beta)))
 
-  bis <- as.matrix(ranef(tmp_model))
+  bis <- as.matrix(lqmm::ranef(tmp_model))
   bis[abs(bis)<.0001] <- 0
   initial.values <- list(b = bis,
                          beta = priorMean.beta,
@@ -161,7 +169,7 @@ qrjm.BQt <- function(formFixed,
                         mu0 = rep(0, ncol(U))
                    )
     )
-    initial.values$prec.Sigma2 <- diag(1/VarCorr(tmp_model))
+    initial.values$prec.Sigma2 <- diag(1/lqmm::VarCorr(tmp_model))
   }
 
   #--- survival part
@@ -267,7 +275,7 @@ qrjm.BQt <- function(formFixed,
                   )
 
   # parameters to save in the sampling step
-  parms_to_save <- c("alpha", "alpha.assoc", "beta", "sigma", "b", "prec.Sigma2")
+  parms_to_save <- c("alpha", "alpha.assoc", "beta", "sigma", "b", "covariance.b")
 
   # complement given survMod
   if(survMod == "weibull"){
@@ -288,18 +296,34 @@ qrjm.BQt <- function(formFixed,
                    Data = jags.data,
                    param = param)
 
+
   #---- use JAGS sampler
-  JMjags.model <- rjags::jags.model(file = "JagsModel.txt",
-                                    data = jags.data,
-                                    inits = initial.values,
-                                    n.chains = n.chains,
-                                    n.adapt = n.adapt,
-                                    quiet = quiet)
-  update(JMjags.model, n.burnin)
-  fit <- rjags::coda.samples(JMjags.model,
-                             variable.names = parms_to_save,
-                             n.iter = n.iter - n.burnin,
-                             thin = n.thin)
+  # if (!require("rjags"))
+  #   stop("'rjags' is required.\n")
+
+  if(n.chains==3)
+    inits <- list(initial.values,
+                  initial.values,
+                  initial.values)
+  if(n.chains==2)
+    inits <- list(initial.values,
+                  initial.values)
+  if(n.chains==1)
+    inits <- initial.values
+
+  # using jagsUI
+  out_jags = jagsUI::jags(data = jags.data,
+                          parameters.to.save = parms_to_save,
+                          model.file = "JagsModel.txt",
+                          inits = inits,
+                          n.chains = n.chains,
+                          parallel = parallel,
+                          n.adapt = n.adapt,
+                          n.iter = n.iter,
+                          n.burnin = n.burnin,
+                          n.thin = n.thin,
+                          DIC = F)
+
   file.remove(file.path(working.directory, "JagsModel.txt"))
 
   #---- output building
@@ -308,8 +332,7 @@ qrjm.BQt <- function(formFixed,
 
   #- arguments
   out <- list(data = data)
-  out$control <- list(fit = fit,
-                      formFixed,
+  out$control <- list(formFixed,
                       formRandom,
                       formGroup,
                       tau = tau,
@@ -317,91 +340,53 @@ qrjm.BQt <- function(formFixed,
                       I = I,
                       C = C,
                       param = param,
-                      survMod = survMod)
+                      survMod = survMod,
+                      n.chains = n.chains,
+                      parallel = parallel,
+                      n.adapt = n.adapt,
+                      n.iter = n.iter,
+                      n.burnin = n.burnin,
+                      n.thin = n.thin,
+                      RE_ind = RE_ind,
+                      event = event,
+                      Time = Time)
 
   #- other outputs
-  Bs <- do.call(rbind, fit)
-  sims.list <- vector("list", length(parms_to_save))
-  names(sims.list) <- parms_to_save
-  for (p in seq_along(parms_to_save)) {
-    ii <- grep(paste("^", parms_to_save[p], sep = ""), colnames(Bs))
-    sims.list[[p]] <- Bs[, ii]
-  }
-  sims.list <- list(beta = sims.list$beta,
-                    sigma = sims.list$sigma,
-                    b = sims.list$b,
-                    alpha = sims.list$alpha,
-                    shape = sims.list$shape,
-                    prec.Sigma2 = sims.list$prec.Sigma2)
-  colnames(sims.list$beta) <- colnames(X)
-  colnames(sims.list$alpha)[1:length(colnames(Z))] <- colnames(Z)
 
-  #- random effect management
-  ind.bs <- grep("b[", colnames(sims.list$b), fixed = TRUE)
-  sims.list$b <- sims.list$b[, ind.bs, drop = FALSE]
-  ranef <- sims.list$b
-  if(jags.data$ncU!=1){
-    ord.col <- sapply(strsplit(colnames(ranef), "[", fixed = TRUE),"[", 2)
-    ord.col <- sapply(strsplit(ord.col, ",", fixed = TRUE), "[",1)
-    ord.col <- order(as.numeric(ord.col))
-    ranef <- ranef[, ord.col, drop = FALSE]
-  }
-  postMeans <- matrix(colMeans(ranef), ncol = ncol(U), byrow = TRUE)
-  dimnames(postMeans) <- list(levels(factor(id)), colnames(U))
-  postVars <- vector("list", nrow(postMeans))
-  ind.var <- matrix(seq_len(ncol(ranef)), ncol = ncol(U), byrow = TRUE)
-  for (i in seq_along(postVars)){
-    postVars[[i]] <- var(ranef[, ind.var[i, ]])
-  }
-  if(jags.data$ncU!=1){
-    postVars[] <- lapply(postVars,
-                         function(m) {
-                           dimnames(m) <- list(colnames(postMeans), colnames(postMeans))
-                           m
-                         }
-    )
-  }
-  names(postVars) <- rownames(postMeans)
-  out$postMeans = postMeans
-  out$postVars = postVars
-  out$sims.list.b <- sims.list$b
-  sims.list$b <- NULL
+  # sims.list output
+  out$sims.list <- out_jags$sims.list
+  out$sims.list$b <- NULL
 
-  #- draws of parameters
-  out$sims.list <- sims.list
-  # model parameters
-  if(!RE_ind && jags.data$ncU>1){
-    indSigma2 <- cbind(rep(1:jags.data$ncU, each = jags.data$ncU),
-                       rep(1:jags.data$ncU, jags.data$ncU))
-    Sigma2 <- t(sapply(seq_len(nrow(Bs)),
-                       function(i) {
-                         m <- matrix(0, jags.data$ncU, jags.data$ncU)
-                         m[indSigma2] <- sims.list$prec.Sigma2[i, ]
-                         d <- solve(m)
-                         d[lower.tri(d, TRUE)]
-                       }))
-    out$sims.list$Sigma2 = Sigma2
-    out$sims.list$prec.Sigma2 <- NULL
-    tmp_mat <- matrix(1, ncol = jags.data$ncU, nrow = jags.data$ncU)
-    colnames(out$sims.list$Sigma2) <- paste("Sigma2[", row(tmp_mat)[lower.tri(tmp_mat,TRUE)],
-                                            ", ",
-                                            col(tmp_mat)[lower.tri(tmp_mat, TRUE)],
-                                            "]",
-                                            sep = "")
-  }else{ # if RE_ind
-    out$sims.list$Sigma2 = 1/sims.list$prec.Sigma2
-    out$sims.list$prec.Sigma2 <- NULL
-    if(jags.data$ncU>1){
-      colnames(out$sims.list$Sigma2) <- gsub("prec.", "", colnames(sims.list$Sigma2))
+  # random effect output
+  out$random_effect <- list(postMeans = out_jags$mean$b,
+                            postSd = out_jags$sd$b)
+  colnames(out$random_effect$postMeans) <- colnames(U)
+  colnames(out$random_effect$postSd) <- colnames(U)
+
+  # median : Posterior median of parameters
+  out$median <- out_jags$q50
+  out$median$b <- NULL
+
+  # mean : Posterior mean of parameters
+  out$mean <- out_jags$mean
+  out$mean$b <- NULL
+
+  # modes of parameters
+  out$modes <- lapply(out$sims.list, function(x) {
+    m <- function(x) {
+      d <- density(x, bw = "nrd", adjust = 3, n = 1000)
+      d$x[which.max(d$y)]
     }
-  }
-  # all parameters
-  out$CIs <- lapply(out$sims.list, function(x) if (is.matrix(x))
-    apply(x, 2, quantile, probs = c(0.025, 0.975))
-    else quantile(x, probs =  c(0.025, 0.975)))
-  out$coefficients <- lapply(out$sims.list, function(x) if (is.matrix(x))
-    apply(x, 2, median)
-    else median(x))
+    if (is.matrix(x))
+      as.array(apply(x, 2, m))
+    else{
+      if(is.array(x))
+        apply(x, c(2,3), m)
+      else m(x)
+    }
+  })
+
+  # standard error of parameters
   out$StErr <- lapply(out$sims.list, function(x) {
     f <- function(x) {
       acf.x <- drop(acf(x, lag.max = 0.4 * length(x), plot = FALSE)$acf)[-1]
@@ -410,50 +395,107 @@ qrjm.BQt <- function(formFixed,
       sqrt(var(x)/ess)
     }
     if (is.matrix(x))
-      apply(x, 2, f)
-    else f(x)
-  })
-  out$StDev <- lapply(out$sims.list, function(x) if (is.matrix(x))
-    apply(x, 2, sd)
-    else sd(x))
-  # idem for mode
-  out$modes <- lapply(out$sims.list, function(x) {
-    m <- function(x) {
-      d <- density(x, bw = "nrd", adjust = 3, n = 1000)
-      d$x[which.max(d$y)]
+      as.array(apply(x, 2, f))
+    else{
+      if(is.array(x))
+        apply(x, c(2,3), f)
+      else f(x)
     }
-    if (is.matrix(x))
-      apply(x, 2, m)
-    else m(x)
   })
 
+  # standard deviation of parameters
+  out$StDev <- out_jags$sd
+  out$StDev$b <- NULL
 
-  if(!RE_ind && jags.data$ncU>1){
-      Sigma2 <- matrix(0, ncol = jags.data$ncU, nrow = jags.data$ncU)
-      Sigma2[lower.tri(Sigma2, TRUE)] <- out$coefficients$Sigma2
-      Sigma2 <- Sigma2 + t(Sigma2)
-      diag(Sigma2) <- diag(Sigma2)/2
-      out$coefficients$Sigma2 <- Sigma2
-      dimnames(out$coefficients$Sigma2) <- list(colnames(U),colnames(U))
-      # idem for mode
-      Sigma2 <- matrix(0, ncol = jags.data$ncU, nrow = jags.data$ncU)
-      Sigma2[lower.tri(Sigma2, TRUE)] <- out$modes$Sigma2
-      Sigma2 <- Sigma2 + t(Sigma2)
-      diag(Sigma2) <- diag(Sigma2)/2
-      out$modes$Sigma2 <- Sigma2
-      dimnames(out$modes$Sigma2) <- list(colnames(U),colnames(U))
+  # Rhat : Gelman & Rubin diagnostic
+  out$Rhat <- out_jags$Rhat
+  out$Rhat$b <- NULL
+
+  # names
+  names(out$mean$beta) <-
+    names(out$median$beta) <-
+    names(out$modes$beta) <-
+    names(out$StErr$beta) <-
+    names(out$Rhat$beta) <-
+    names(out$StDev$beta) <- colnames(X)
+
+  if(RE_ind){
+    names(out$mean$covariance.b) <-
+      names(out$median$covariance.b) <-
+      names(out$modes$covariance.b) <-
+      names(out$StErr$covariance.b) <-
+      names(out$Rhat$covariance.b) <-
+      names(out$StDev$covariance.b) <- colnames(U)
   }else{
+    colnames(out$mean$covariance.b) <-
+      rownames(out$mean$covariance.b) <-
+      colnames(out$median$covariance.b) <-
+      rownames(out$median$covariance.b) <-
+      colnames(out$modes$covariance.b) <-
+      rownames(out$modes$covariance.b) <-
+      colnames(out$Rhat$covariance.b) <-
+      rownames(out$Rhat$covariance.b) <-
+      colnames(out$StErr$covariance.b) <-
+      rownames(out$StErr$covariance.b) <-
+      colnames(out$StDev$covariance.b) <-
+      rownames(out$StDev$covariance.b) <- colnames(U)
+  }
+
+  names(out$mean$alpha) <-
+    names(out$median$alpha) <-
+    names(out$modes$alpha) <-
+    names(out$StErr$alpha) <-
+    names(out$StDev$alpha) <- colnames(Z)
+
+  # credible intervalles
+  out$CIs$beta <- cbind(as.vector(t(out_jags$q2.5$beta)),
+                        as.vector(t(out_jags$q97.5$beta)))
+  rownames(out$CIs$beta) <- colnames(X)
+  colnames(out$CIs$beta) <- c("2.5%", "97.5%")
+
+  out$CIs$sigma <- c(out_jags$q2.5$sigma,
+                     out_jags$q97.5$sigma)
+  names(out$CIs$sigma) <- c("2.5%", "97.5%")
+
+  out$CIs$shape <- c(out_jags$q2.5$shape,
+                     out_jags$q97.5$shape)
+  names(out$CIs$shape) <- c("2.5%", "97.5%")
+
+  if(param %in% c("value")){
+    out$CIs$alpha.assoc <- c(out_jags$q2.5$alpha.assoc,
+                             out_jags$q97.5$alpha.assoc)
+    names(out$CIs$alpha.assoc) <- c("2.5%", "97.5%")
+  }
+  if(param %in% c("sharedRE")){
     if(jags.data$ncU>1){
-      out$coefficients$Sigma2 <- diag(out$coefficients$Sigma2)
-      out$modes$Sigma2 <- diag(out$modes$Sigma2)
-      dimnames(out$coefficients$Sigma2) <- dimnames(out$modes$Sigma2) <- list(colnames(U),colnames(U))
+      out$CIs$alpha.assoc <- cbind(as.vector(t(out_jags$q2.5$alpha.assoc)),
+                                   as.vector(t(out_jags$q97.5$alpha.assoc)))
+      rownames(out$CIs$alpha.assoc) <- colnames(U)
+      colnames(out$CIs$alpha.assoc) <- c("2.5%", "97.5%")
     }else{
-      names(out$coefficients$Sigma2) <- names(out$modes$Sigma2) <- colnames(U)
+      out$CIs$alpha.assoc <- c(out_jags$q2.5$alpha.assoc,
+                               out_jags$q97.5$alpha.assoc)
+      names(out$CIs$alpha.assoc) <- c("2.5%", "97.5%")
     }
   }
+
+  out$CIs$alpha <- cbind(as.vector(t(out_jags$q2.5$alpha)),
+                         as.vector(t(out_jags$q97.5$alpha)))
+  rownames(out$CIs$alpha) <- colnames(Z)
+  colnames(out$CIs$alpha) <- c("2.5%", "97.5%")
+
+  # only for diagonal elements of covariance matrix of random effects
+  out$CIs$variances.b <- cbind(as.vector(diag(out_jags$q2.5$covariance.b)),
+                               as.vector(diag(out_jags$q97.5$covariance.b)))
+  rownames(out$CIs$variances.b) <- colnames(U)
+  colnames(out$CIs$variances.b) <- c("2.5%", "97.5%")
+
+  # save jags output if requires
+  if(save_jagsUI)
+    out$out_jagsUI <- out_jags
 
   #---- End of the function defining the class and retruning the output
   class(out) <- "BQt"
   out
 
-  }
+}

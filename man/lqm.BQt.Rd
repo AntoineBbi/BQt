@@ -8,12 +8,13 @@ lqm.BQt(
   formula,
   data,
   tau = 0.5,
-  n.chains = 1,
+  n.chains = 3,
   n.iter = 10000,
   n.burnin = 5000,
   n.thin = 1,
-  n.adapt = 5000,
-  quiet = FALSE
+  n.adapt = NULL,
+  save_jagsUI = TRUE,
+  parallel = FALSE
 )
 }
 \arguments{
@@ -31,18 +32,29 @@ lqm.BQt(
 
 \item{n.thin}{integer specifying the thinning of the chains; default is 1}
 
-\item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is 5000}
+\item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is NULL}
 
-\item{quiet}{see rjags package}
+\item{save_jagsUI}{If TRUE (by default), the output of jagsUI package is return by the function}
+
+\item{parallel}{see jagsUI::jags() function}
 }
 \value{
 A \code{BQt} object which is a list with the following elements:
    \describe{
-  \item{\code{Coefficients}}{list of posterior median of each parameter}
-  \item{\code{ICs}}{list of the credibility interval at 0.95}
-  \item{\code{data}}{data include in argument}
-  \item{\code{sims.list}}{list of the MCMC chains of the parameters}
-   }
+  \item{\code{mean}}{list of posterior mean for each parameter}
+  \item{\code{median}}{list of posterior median for each parameter}
+  \item{\code{modes}}{list of posterior mode for each parameter}
+  \item{\code{StErr}}{list of standard error for each parameter}
+  \item{\code{StDev}}{list of standard deviation for each parameter}
+  \item{\code{Rhat}}{Gelman and Rubin diagnostic for all parameters}
+  \item{\code{ICs}}{list of the credibility interval at 0.95 for each parameters excepted for covariance parameters in covariance matrix of random effects. Otherwise, use save_jagsUI=TRUE to have the associated quantiles.}
+  \item{\code{data}}{data included in argument}
+  \item{\code{sims.list}}{list of the MCMC chains of the parameters and random effects}
+  \item{\code{control}}{list of arguments giving details about the estimation}
+  \item{\code{W}}{list including both posterior mean and posterior standard deviation of subject-specific random varaible W}
+  \item{\code{out_jagsUI}}{only if \code{save_jagsUI=TRUE} in argument: list including posterior mean, median, quantiles (2.5%, 25%, 50%, 75%, 97.5%), standart deviation for each parameter and each random effect.
+  Moreover, this list also returns the MCMC draws, the Gelman and Rubin diagnostics (see output of jagsUI objects)}
+ }
 }
 \description{
 Function using JAGS to estimate the linear quantile regression model assuming asymmetric Laplace
@@ -53,15 +65,17 @@ distribution for residual error.
 data(wave)
 
 #---- Fit regression model for the first quartile
-BQt_025 <- lqm.BQt(formula = h110d~vent_vit_moy,
+lqm_025 <- lqm.BQt(formula = h110d~vent_vit_moy,
                    data = wave,
+                   n.iter = 1000,
+                   n.burnin = 500,
                    tau = 0.25)
 
-#---- Get the estimated coefficients
-BQt_025$coefficients
+#---- Get the posterior mean of parameters
+lqm_025$mean
 
 #---- Summary of output
-summary.BQt(BQt_025)
+summary(lqm_025)
 
 }
 \author{
