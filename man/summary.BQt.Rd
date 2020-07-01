@@ -7,7 +7,7 @@
 \method{summary}{BQt}(object, ...)
 }
 \arguments{
-\item{object}{an object inheriting from class 'JMcuR'}
+\item{object}{an object inheriting from class 'BQt'}
 
 \item{...}{further arguments to be passed to or from other methods. They are ignored in this function.}
 }
@@ -15,11 +15,11 @@
 Returns NULL.
 }
 \description{
-The function provides a summary of linear quantile regression model (LQRM) estimations. First, LQRM's details are given.
-Next, the estimation parameters (posterior median) and bound of the credible interval at 95% are given.
+The function provides a summary of BQt object (lqm, lqmm, qrjm, mlqmm).
+Therfore, the estimation parameters (posterior mean) and bounds of the credible interval at 95% and Gelman & Rubin diagnostic are given.
 }
 \seealso{
-\code{\link{lqm.BQt}}
+\code{\link{lqm.BQt}}, \code{\link{lqmm.BQt}}, \code{\link{mlqmm.BQt}}, \code{\link{qrjm.BQt}}
 }
 \author{
 Antoine Barbieri
