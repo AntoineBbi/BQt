@@ -20,6 +20,7 @@ jags_lqmm_IG <-
   # priors for parameters
   for(rr in 1:ncU){
     prec.Sigma2[rr] ~ dgamma(priorA.Sigma2, priorB.Sigma2)
+    covariance.b[rr] <- 1/prec.Sigma2[rr]
   }
   beta[1:ncX] ~ dmnorm(priorMean.beta[], priorTau.beta[, ])
   sigma ~ dgamma(priorA.sigma, priorB.sigma)
