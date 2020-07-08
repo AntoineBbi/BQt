@@ -121,6 +121,7 @@ qrjm.BQt <- function(formFixed,
   id <- as.integer(data_long[all.vars(formGroup)][,1])
   offset <- as.vector(c(1, 1 + cumsum(tapply(id, id, length))))
   I <- length(unique(id))
+  data_long$id <- data_long[all.vars(formGroup)][,1]
   # use lqmm function to initiated values
   cat("> Initiation of longitudinal parameter values using 'lqmm' package. \n")
   tmp_model <- lqmm::lqmm(fixed = formFixed,
