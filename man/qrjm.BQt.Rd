@@ -23,6 +23,7 @@ qrjm.BQt(
   precision = 10,
   C = 1000,
   save_jagsUI = TRUE,
+  save_va = FALSE,
   parallel = FALSE
 )
 }
@@ -61,7 +62,9 @@ qrjm.BQt(
 
 \item{C}{value used in the zero trick; default is 1000.}
 
-\item{save_jagsUI}{If TRUE (by default), the output of jagsUI package is return by the function}
+\item{save_jagsUI}{If TRUE (by default), the output of jagsUI package is returned by the function}
+
+\item{save_va}{If TRUE (is FALSE by default), the draws of auxilary variable W is returned by the function}
 
 \item{parallel}{see jagsUI::jags() function}
 }

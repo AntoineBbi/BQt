@@ -21,7 +21,8 @@
 #' @param n.adapt integer specifying the number of iterations to use for adaptation; default is 5000
 #' @param precision variance by default for vague prior distribution
 #' @param C value used in the zero trick; default is 1000.
-#' @param save_jagsUI If TRUE (by default), the output of jagsUI package is return by the function
+#' @param save_va If TRUE (is FALSE by default), the draws of auxilary variable W is returned by the function
+#' @param save_jagsUI If TRUE (by default), the output of jagsUI package is returned by the function
 #' @param parallel see jagsUI::jags() function
 #'
 #'
@@ -96,6 +97,7 @@ qrjm.BQt <- function(formFixed,
                      precision = 10,
                      C = 1000,
                      save_jagsUI = TRUE,
+                     save_va = FALSE,
                      parallel = FALSE){
 
   # #
@@ -121,7 +123,8 @@ qrjm.BQt <- function(formFixed,
   id <- as.integer(data_long[all.vars(formGroup)][,1])
   offset <- as.vector(c(1, 1 + cumsum(tapply(id, id, length))))
   I <- length(unique(id))
-  data_long$id <- data_long[all.vars(formGroup)][,1]
+  if(!("id" %in% colnames(data_long)))
+    data_long <- cbind(data_long, id = id)
   # use lqmm function to initiated values
   cat("> Initiation of longitudinal parameter values using 'lqmm' package. \n")
   tmp_model <- lqmm::lqmm(fixed = formFixed,
@@ -277,6 +280,8 @@ qrjm.BQt <- function(formFixed,
 
   # parameters to save in the sampling step
   parms_to_save <- c("alpha", "alpha.assoc", "beta", "sigma", "b", "covariance.b")
+  if(save_va)
+    parms_to_save <- c(parms_to_save, "va1")
 
   # complement given survMod
   if(survMod == "weibull"){
@@ -411,6 +416,10 @@ qrjm.BQt <- function(formFixed,
   # Rhat : Gelman & Rubin diagnostic
   out$Rhat <- out_jags$Rhat
   out$Rhat$b <- NULL
+
+  # clean regarding auxilary variable (information avalaible in jagsUI output)
+  if(save_va)
+    out$sims.list$va1 <- out$median$va1 <- out$mean$va1 <- out$StDev$va1 <- out$Rhat$va1 <- NULL
 
   # names
   names(out$mean$beta) <-
