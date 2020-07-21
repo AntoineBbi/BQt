@@ -47,7 +47,7 @@ if 'free", a specific correlation parameter is assumed for each multivariate res
 
 \item{n.thin}{integer specifying the thinning of the chains; default is 1}
 
-\item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is 5000}
+\item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is NULL}
 
 \item{precision}{variance by default for vague prior distribution}
 
