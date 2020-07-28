@@ -338,9 +338,10 @@ qrjm.BQt <- function(formFixed,
 
   #- arguments
   out <- list(data = data)
-  out$control <- list(formFixed,
-                      formRandom,
-                      formGroup,
+  out$control <- list(formFixed = formFixed,
+                      formRandom = formRandom,
+                      formGroup = formGroup,
+                      formSurv = formSurv,
                       tau = tau,
                       call_function = "qrjm.BQt",
                       I = I,
