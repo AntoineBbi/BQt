@@ -24,7 +24,7 @@ jags_qrjm.weib.sharedRE <-
   }#end of i loop
   # priors for longitudinal parameters
   prec.Sigma2[1:ncU, 1:ncU] ~ dwish(priorR.Sigma2[, ], priorK.Sigma2)
-  covariance.b[, ] <- inverse(prec.Sigma2[, ])
+  covariance.b <- inverse(prec.Sigma2[, ])
   beta[1:ncX] ~ dmnorm(priorMean.beta[], priorTau.beta[, ])
   sigma ~ dgamma(priorA.sigma, priorB.sigma)
   # priors for survival parameters

@@ -72,8 +72,8 @@
 #' #---- Visualize the trace for beta parameters
 #' jagsUI::traceplot(qrjm_25$out_jagsUI,parameters = "beta" )
 #'
-#' #---- Get the estimated coefficients
-#' qrjm_25$coefficients
+#' #---- Get the estimated coefficients : posterior means
+#' qrjm_25$mean
 #'
 #' #---- Summary of output
 #' BQt::summary.BQt(qrjm_25)
@@ -126,7 +126,7 @@ qrjm.BQt <- function(formFixed,
   if(!("id" %in% colnames(data_long)))
     data_long <- cbind(data_long, id = id)
   # use lqmm function to initiated values
-  cat("> Initiation of longitudinal parameter values using 'lqmm' package. \n")
+  cat("> Initialisation of longitudinal parameter values using 'lqmm' package. \n")
   tmp_model <- lqmm::lqmm(fixed = formFixed,
                           random = formRandom,
                           group = id,
@@ -187,7 +187,7 @@ qrjm.BQt <- function(formFixed,
   mfZ <- model.frame(formSurv, data = tmp)
   Z <- model.matrix(formSurv, mfZ)
   # use lqmm function to initiated values
-  cat("> Initiation of survival parameter values using 'survival' package. \n")
+  cat("> Initialisation of survival parameter values using 'survival' package. \n")
   tmp_model <- survival::coxph(formSurv,
                                data = tmp,
                                x = TRUE)
@@ -207,8 +207,8 @@ qrjm.BQt <- function(formFixed,
                  )
   # initialisation values of survival parameters
   initial.values$alpha <- c(0, tmp_model$coefficients)
-  if(param=="weibull")
-    initial.values$shape <- 1
+  # if(survMod=="weibull")
+  #   initial.values$shape <- 1
   if(param=="value")
     initial.values$alpha.assoc <- 0
   if(param=="sharedRE")
@@ -342,6 +342,7 @@ qrjm.BQt <- function(formFixed,
                       formRandom = formRandom,
                       formGroup = formGroup,
                       formSurv = formSurv,
+                      timeVar = timeVar,
                       tau = tau,
                       call_function = "qrjm.BQt",
                       I = I,
@@ -363,6 +364,8 @@ qrjm.BQt <- function(formFixed,
   # sims.list output
   out$sims.list <- out_jags$sims.list
   out$sims.list$b <- NULL
+  if(save_va)
+    out$sims.list$va1 <- NULL
 
   # random effect output
   out$random_effect <- list(postMeans = out_jags$mean$b,
@@ -420,7 +423,7 @@ qrjm.BQt <- function(formFixed,
 
   # clean regarding auxilary variable (information avalaible in jagsUI output)
   if(save_va)
-    out$sims.list$va1 <- out$median$va1 <- out$mean$va1 <- out$StDev$va1 <- out$Rhat$va1 <- NULL
+    out$median$va1 <- out$mean$va1 <- out$StDev$va1 <- out$Rhat$va1 <- NULL
 
   # names
   names(out$mean$beta) <-
@@ -455,6 +458,7 @@ qrjm.BQt <- function(formFixed,
   names(out$mean$alpha) <-
     names(out$median$alpha) <-
     names(out$modes$alpha) <-
+    names(out$Rhat$alpha) <-
     names(out$StErr$alpha) <-
     names(out$StDev$alpha) <- colnames(Z)
 

@@ -109,8 +109,8 @@ qrjm_25 <- qrjm.BQt(formFixed = CD4 ~ obstime,
 #---- Visualize the trace for beta parameters
 jagsUI::traceplot(qrjm_25$out_jagsUI,parameters = "beta" )
 
-#---- Get the estimated coefficients
-qrjm_25$coefficients
+#---- Get the estimated coefficients : posterior means
+qrjm_25$mean
 
 #---- Summary of output
 BQt::summary.BQt(qrjm_25)
