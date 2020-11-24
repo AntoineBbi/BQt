@@ -109,7 +109,7 @@ mlqmm.BQt <- function(formFixed,
     RE_ind <- FALSE
   }
   if(RE_ind && corr_structure=="none"){
-    cat("There is not model considering no correlation structure for multiple quantile regression, then 'RE_ind=FALSE'.\n")
+    cat("There is no model considering no correlation structure for multiple quantile regression, then 'RE_ind=FALSE'.\n")
     RE_ind <- FALSE
   }
 
