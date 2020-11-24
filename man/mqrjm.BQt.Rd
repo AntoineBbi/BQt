@@ -15,6 +15,7 @@ mqrjm.BQt(
   data,
   tau,
   corr_structure = "middle",
+  RE_ind = FALSE,
   n.chains = 3,
   n.iter = 10000,
   n.burnin = 5000,
@@ -54,6 +55,9 @@ otherwise the execution is stopped.}
 If 'none', the dependendance is only caught by the common covariance matrix of all random effects;
 if 'middle', the model assumes a correlation structure based on both a common correlation parameter and the distances between considered quantiles's orders;
 if 'free", a specific correlation parameter is assumed for each multivariate responses.}
+
+\item{RE_ind}{if TRUE, the random effects are assumed to be independent between different quantile.
+Otherwise (FALSE by default), correlation between quantile (markers) is also caught through common covariance matrix of random effects.}
 
 \item{n.chains}{the number of parallel chains for the model; default is 1.}
 

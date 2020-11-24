@@ -21,6 +21,8 @@
 #' If 'none', the dependendance is only caught by the common covariance matrix of all random effects;
 #' if 'middle', the model assumes a correlation structure based on both a common correlation parameter and the distances between considered quantiles's orders;
 #' if 'free", a specific correlation parameter is assumed for each multivariate responses.
+#' @param RE_ind if TRUE, the random effects are assumed to be independent between different quantile.
+#' Otherwise (FALSE by default), correlation between quantile (markers) is also caught through common covariance matrix of random effects.
 #' @param n.chains the number of parallel chains for the model; default is 1.
 #' @param n.iter integer specifying the total number of iterations; default is 10000
 #' @param n.burnin integer specifying how many of n.iter to discard as burn-in ; default is 5000
@@ -105,6 +107,7 @@ mqrjm.BQt <- function(formFixed,
                       data,
                       tau,
                       corr_structure = "middle",
+                      RE_ind = FALSE,
                       n.chains = 3,
                       n.iter = 10000,
                       n.burnin = 5000,
@@ -121,18 +124,24 @@ mqrjm.BQt <- function(formFixed,
 
   # Stopping condition
   if(prod(tau<1 && tau>0)!=1)
-    stop("'Tau' have to be a numerical vector with elements included between 0 and 1.\n")
+    stop("'tau' have to be a numerical vector with elements included between 0 and 1.\n")
   if(length(tau)>3)
-    stop("'Tau' have to be a numerical vector with length lower than 4.\n")
+    stop("'tau' have to be a numerical vector with length lower than 4.\n")
   if(sum(duplicated(tau))>0)
     stop("'Tau' have to be a numerical vector with no duplicated quantiles.\n")
-  if(RE_ind && length(tau)==2){
-    cat("Until now, all random effects are assumed dependant when using only two quantiles.\n")
+  if(RE_ind && corr_structure=="none"){
+    cat("At least one correlation structure has to be defined, then 'RE_ind=FALSE'.\n")
     RE_ind <- FALSE
   }
-  if(RE_ind && corr_structure=="none"){
-    cat("There is not model considering no correlation structure for multiple quantile regression, then 'RE_ind=FALSE'.\n")
-    RE_ind <- FALSE
+  if(corr_structure=="middle" && length(tau)==2){
+    cat("The 'middle' correlation structure is equivalent to the 'free' one when two quantiles are considered (i.e. Q=2). Then, corr_structure=='free'.\n")
+    corr_structure <- "free"
+  }
+  if(param=="sharedRE"){
+    cat("Only param='value' is assumed for multiple quantile joint model.
+        If two quantiles are considered, the latent strucutre is the interquantile range  ;
+        if three quatiles are considered, the interquantile range between the two extreme quantile and the current value of the middle one are considered as latent structure.\n")
+    param <- "value"
   }
 
   ### data management
@@ -171,9 +180,16 @@ mqrjm.BQt <- function(formFixed,
   for(qq in 1:Q){
     init_sigma[qq] <- tmp_model[[qq]]$scale
   }
-  initial.values <- list(b = bis,
-                         beta = priorMean.beta,
+  initial.values <- list(beta = priorMean.beta,
                          sigma = init_sigma)
+  if(RE_ind){
+    initial.values$b1 <- bis[, 1:ncU]
+    initial.values$b2 <- bis[, (ncU+1):(2*ncU)]
+    if(Q==3)
+      initial.values$b2 <- bis[, (ncU*2+1):(3*ncU)]
+  }else{
+    initial.values$b <- bis
+  }
 
   # list of data jags
   jags.data <- list(y = matrix(rep(y,Q), ncol = Q, byrow = F),
@@ -191,14 +207,36 @@ mqrjm.BQt <- function(formFixed,
                     priorB.sigma = 1/precision
   )
 
-  jags.data <- c(jags.data,
-                 list(priorR.Sigma2 = diag(rep(1/precision, ncU*Q)),
-                      priorK.Sigma2 = ncU*Q,
-                      mu0 = rep(0, ncU*Q)
-                 )
-  )
-  initial.values$prec.Sigma2 <- diag(1/unlist(lqmm::VarCorr(tmp_model)))
-  initial.values$prec.Sigma2[initial.values$prec.Sigma2 > 100] <- 100
+  if(RE_ind){
+    jags.data <- c(jags.data,
+                   list(priorR.Sigma2 = diag(rep(1/precision, ncU)),
+                        priorK.Sigma2 = ncU,
+                        mu0 = rep(0, ncU)
+                        )
+                   )
+  }else{
+      jags.data <- c(jags.data,
+                     list(priorR.Sigma2 = diag(rep(1/precision, ncU*Q)),
+                          priorK.Sigma2 = ncU*Q,
+                          mu0 = rep(0, ncU*Q)
+                          )
+                     )
+  }
+
+  prec.Sigma2 <- diag(1/unlist(lqmm::VarCorr(tmp_model)))
+  if(RE_ind){
+    initial.values$prec1.Sigma2 <- prec.Sigma2[1:ncU, 1:ncU]
+    initial.values$prec1.Sigma2[initial.values$prec1.Sigma2 > 100] <- 100
+    initial.values$prec2.Sigma2 <- prec.Sigma2[(ncU+1):(2*ncU), (ncU+1):(2*ncU)]
+    initial.values$prec2.Sigma2[initial.values$prec2.Sigma2 > 100] <- 100
+    if(Q==3){
+      initial.values$prec3.Sigma2 <- prec.Sigma2[(ncU*2+1):(3*ncU), (ncU*2+1):(3*ncU)]
+      initial.values$prec3.Sigma2[initial.values$prec3.Sigma2 > 100] <- 100
+    }
+  }else{
+    initial.values$prec.Sigma2 <- prec.Sigma2
+    initial.values$prec.Sigma2[initial.values$prec.Sigma2 > 100] <- 100
+  }
 
   # manage the correlation between quantile
   if(corr_structure == "free"){
@@ -228,7 +266,7 @@ mqrjm.BQt <- function(formFixed,
   # design matrice
   mfZ <- model.frame(formSurv, data = tmp)
   Z <- model.matrix(formSurv, mfZ)
-  # use lqmm function to initiated values
+  # use survival::coxph function to initiated values
   cat("> Initiation of survival parameter values using 'survival' package. \n")
   tmp_model <- survival::coxph(formSurv,
                                data = tmp,
@@ -244,22 +282,30 @@ mqrjm.BQt <- function(formFixed,
                       Z = Z,
                       ncZ = ncol(Z),
                       priorMean.alpha = priorMean.alpha,
-                      priorTau.alpha = priorTau.alpha,
-                      priorTau.alphaA = 1/precision)
+                      priorTau.alpha = priorTau.alpha)
   )
   # initialisation values of survival parameters
   initial.values$alpha <- c(0, tmp_model$coefficients)
   # if(survMod=="weibull")
   #   initial.values$shape <- 1
-  if(param=="value")
+  if(Q==2){
     initial.values$alpha.assoc <- 0
-  if(param=="sharedRE")
-    initial.values$alpha.assoc <- rep(0, ncol(U))
+    jags.data <- c(jags.data,
+                   list(priorMean.alpha.assoc = 0,
+                   priorTau.alpha.assoc = 1/precision)
+                   )
+  }else{
+    initial.values$alpha.assoc <- rep(0,Q-1)
+    jags.data <- c(jags.data,
+                   list(priorMean.alpha.assoc = rep(0,Q-1),
+                   priorTau.alpha.assoc = diag(rep(1/precision,Q-1)))
+                   )
+  }
 
   #--- shared current value case
   data.id <- data_long[!duplicated(id), ]
   if (!timeVar %in% names(data_long))
-    stop("\n'timeVar' does not correspond to one of the columns in formulas")
+    stop("'timeVar' does not correspond to one of the columns in formulas.\n")
   if (param %in% c("value")) {
     data.id[[timeVar]] <- pmax(Time - lag, 0)
     mfX.id <- model.frame(formFixed, data = data.id)
@@ -306,34 +352,49 @@ mqrjm.BQt <- function(formFixed,
   }
 
 
-  # write jags model
-
-  model <- switch(paste(corr_structure, Q, sep = "/"),
-                  `free/3` = jags_3mqrjm_f,
-                  `middle/3` = jags_3mqrjm_m,
-                  `none/3` = jags_3mqrjm_n,
-                  `free/2` = jags_2mqrjm_f,
-                  `none/2` = jags_mqrjm_n
+  # write jags model (only Weibull baseline hazard function)
+  model <- switch(paste(corr_structure, Q, RE_ind, sep = "/"),
+                  `free/3/FALSE` = jags_3mqrjm_f.weib.value,
+                  `free/3/TRUE`  = jags_3mqrjm_f_b.weib.value,
+                  `free/2/FALSE` = jags_2mqrjm_f.weib.value,
+                  `free/2/TRUE`  = jags_2mqrjm_f_b.weib.value,
+                  `middle/3/FALSE` = jags_3mqrjm_m.weib.value,
+                  `middle/3/TRUE`  = jags_3mqrjm_m_b.weib.value,
+                  `none/3/FALSE` = jags_3mqrjm_n.weib.value,
+                  `none/2/FALSE` = jags_2mqrjm_n.weib.value
   )
 
   # parameters to save in the sampling step
-  parms_to_save <- c("alpha", "alpha.assoc", "beta", "sigma", "covariance.b", "b")
-  # specific parameter
-  if(corr_structure == "free"){
-    if(Q==3){
+  parms_to_save <- c("alpha", "alpha.assoc", "beta", "sigma")
+  if(survMod == "weibull")
+    parms_to_save <- c(parms_to_save, "shape")
+
+  # specific parameters
+  if(Q==3){
+    if(corr_structure == "free"){
       parms_to_save <- c(parms_to_save, "rho12", "rho13", "rho23")
-    }else{
-      # Q=2
+    }
+    if(corr_structure == "middle"){
+      jags.data$d12 <- tau[2]-tau[1]
+      jags.data$d13 <- tau[3]-tau[1]
+      jags.data$d23 <- tau[3]-tau[2]
       parms_to_save <- c(parms_to_save, "rho")
     }
-  }
-  if(corr_structure == "middle"){
-    jags.data$d12 <- tau[2]-tau[1]
-    jags.data$d13 <- tau[3]-tau[1]
-    jags.data$d23 <- tau[3]-tau[2]
-    parms_to_save <- c(parms_to_save, "rho")
-  }
+    if(RE_ind){
+      parms_to_save <- c(parms_to_save, "b1", "b2", "b3", "covariance.b1", "covariance.b2", "covariance.b3")
+    }else{
+      parms_to_save <- c(parms_to_save, "b", "covariance.b")
+    }
+  }else{# Q==2
+      parms_to_save <- c(parms_to_save, "rho")
+      if(RE_ind){
+        parms_to_save <- c(parms_to_save, "b1", "b2", "covariance.b1", "covariance.b2")
+      }else{
+        parms_to_save <- c(parms_to_save, "b", "covariance.b")
+      }
+    }
 
+  # useful to compute deviance in joint modeling
   if(save_va)
     parms_to_save <- c(parms_to_save, "W")
 
@@ -386,6 +447,7 @@ mqrjm.BQt <- function(formFixed,
                       formRandom = formRandom,
                       formGroup = formGroup,
                       formSurv = formSurv,
+                      timeVar = timeVar,
                       tau = tau,
                       call_function = "mqrjm.BQt",
                       I = I,
@@ -394,17 +456,26 @@ mqrjm.BQt <- function(formFixed,
                       survMod = survMod,
                       corr_structure = corr_structure,
                       n.chains = n.chains,
-                      parallel = parallel,
                       n.adapt = n.adapt,
                       n.iter = n.iter,
                       n.burnin = n.burnin,
-                      n.thin = n.thin)
+                      n.thin = n.thin,
+                      parallel = parallel,
+                      RE_ind = RE_ind,
+                      event = event,
+                      Time = Time)
 
   #- other outputs
 
   # sims.list output
   out$sims.list <- out_jags$sims.list
-  out$sims.list$b <- NULL
+  if(!is.null(out$sims.list$out))
+    out$sims.list$out <- NULL
+  if(!RE_ind){
+    out$sims.list$b <- NULL
+  }else{
+    out$sims.list$b1 <- out$sims.list$b2 <- out$sims.list$b3 <- NULL
+  }
 
   # random effect output
   random_effect <- vector("list", Q)
@@ -417,28 +488,46 @@ mqrjm.BQt <- function(formFixed,
                               paste("tau", 100*tau[2], sep=""))
   }
 
-  for(q in 1:Q){
-    random_effect[[q]] <- list(postMeans = out_jags$mean$b[, ((q-1)*ncU+1):(q*ncU)],
-                               postSd = out_jags$sd$b[, ((q-1)*ncU+1):(q*ncU)])
-    colnames(random_effect[[q]]$postMeans) <- colnames(U)
-    colnames(random_effect[[q]]$postSd) <- colnames(U)
+  if(!RE_ind){
+    for(q in 1:Q){
+      random_effect[[q]] <- list(postMeans = out_jags$mean$b[, ((q-1)*ncU+1):(q*ncU)],
+                                 postSd = out_jags$sd$b[, ((q-1)*ncU+1):(q*ncU)])
+      colnames(random_effect[[q]]$postMeans) <- colnames(U)
+      colnames(random_effect[[q]]$postSd) <- colnames(U)
+    }
+  }else{
+    random_effect[[1]] <- list(postMeans = out_jags$mean$b1, postSd = out_jags$sd$b1)
+    random_effect[[2]] <- list(postMeans = out_jags$mean$b2, postSd = out_jags$sd$b2)
+    colnames(random_effect[[1]]$postMeans) <-
+      colnames(random_effect[[2]]$postMeans) <- colnames(U)
+    colnames(random_effect[[1]]$postSd) <-
+      colnames(random_effect[[2]]$postSd) <- colnames(U)
+    if(Q==3){
+      random_effect[[3]] <- list(postMeans = out_jags$mean$b3, postSd = out_jags$sd$b3)
+      colnames(random_effect[[3]]$postMeans) <- colnames(random_effect[[3]]$postSd) <- colnames(U)
+    }
   }
   out$random_effect <- random_effect
 
   # median : Posterior median of parameters (if mean, you can use mean instead of q50)
   out$median <- out_jags$q50
-  out$median$b <- NULL
+  if(!RE_ind){
+    out$median$b <- NULL
+  }else{
+    out$median$b1 <- out$median$b2 <- NULL
+    if(Q==3)
+      out$median$b3 <- NULL
+  }
 
   # mean : Posterior mean of parameters (if mean, you can use mean instead of q50)
   out$mean <- out_jags$mean
-  out$mean$b <- NULL
-
-  # # if inverse in jags doesn't run
-  # sims.list$covariance.b <- array(NA, dim = dim(jags_res$sims.list$prec.Sigma2))
-  # for(i in 1:dim(jags_res$sims.list$prec.Sigma2)[1]){
-  #   sims.list$covariance.b[i, , ] <- solve(jags_res$sims.list$prec.Sigma2[i, , ])
-  # }
-  # out$sims.list$covariance.b = covariance.b
+  if(!RE_ind){
+    out$mean$b <- NULL
+  }else{
+    out$mean$b1 <- out$mean$b2 <- NULL
+    if(Q==3)
+      out$mean$b3 <- NULL
+  }
 
   # modes of parameters
   out$modes <- lapply(out$sims.list, function(x) {
@@ -473,13 +562,23 @@ mqrjm.BQt <- function(formFixed,
 
   # standard deviation of parameters
   out$StDev <- out_jags$sd
-  out$StDev$b <- NULL
-
+  if(!RE_ind){
+    out$StDev$b <- NULL
+  }else{
+    out$StDev$b1 <- out$StDev$b2 <- NULL
+    if(Q==3)
+      out$StDev$b3 <- NULL
+  }
 
   # Rhat : Gelman & Rubin diagnostic
   out$Rhat <- out_jags$Rhat
-  out$Rhat$b <- NULL
-
+  if(!RE_ind){
+    out$Rhat$b <- NULL
+  }else{
+    out$Rhat$b1 <- out$Rhat$b2 <- NULL
+    if(Q==3)
+      out$Rhat$b3 <- NULL
+  }
   # names
   names(out$mean$alpha) <-
     names(out$median$alpha) <-
@@ -507,21 +606,63 @@ mqrjm.BQt <- function(formFixed,
     rownames(out$Rhat$sigma) <-
     rownames(out$StDev$sigma) <- paste("tau", as.character(tau*100), sep = "")
 
-  colnames(out$mean$covariance.b) <-
-    rownames(out$mean$covariance.b) <-
-    colnames(out$median$covariance.b) <-
-    rownames(out$median$covariance.b) <-
-    colnames(out$modes$covariance.b) <-
-    rownames(out$modes$covariance.b) <-
-    colnames(out$StErr$covariance.b) <-
-    rownames(out$StErr$covariance.b) <-
-    colnames(out$Rhat$covariance.b) <-
-    rownames(out$Rhat$covariance.b) <-
-    colnames(out$StDev$covariance.b) <-
-    rownames(out$StDev$covariance.b) <- paste(rep(paste("tau", as.character(tau*100), sep = ""),
-                                                  each = ncU),
-                                              rep(colnames(U), Q),
-                                              sep = ".")
+  if(RE_ind){
+    colnames(out$mean$covariance.b1) <-
+      rownames(out$mean$covariance.b1) <-
+      colnames(out$median$covariance.b1) <-
+      rownames(out$median$covariance.b1) <-
+      colnames(out$modes$covariance.b1) <-
+      rownames(out$modes$covariance.b1) <-
+      colnames(out$StErr$covariance.b1) <-
+      rownames(out$StErr$covariance.b1) <-
+      colnames(out$Rhat$covariance.b1) <-
+      rownames(out$Rhat$covariance.b1) <-
+      colnames(out$StDev$covariance.b1) <-
+      rownames(out$StDev$covariance.b1) <-
+      colnames(out$mean$covariance.b2) <-
+      rownames(out$mean$covariance.b2) <-
+      colnames(out$median$covariance.b2) <-
+      rownames(out$median$covariance.b2) <-
+      colnames(out$modes$covariance.b2) <-
+      rownames(out$modes$covariance.b2) <-
+      colnames(out$StErr$covariance.b2) <-
+      rownames(out$StErr$covariance.b2) <-
+      colnames(out$Rhat$covariance.b2) <-
+      rownames(out$Rhat$covariance.b2) <-
+      colnames(out$StDev$covariance.b2) <-
+      rownames(out$StDev$covariance.b2) <-  colnames(U)
+    if(Q==3){
+      colnames(out$mean$covariance.b3) <-
+        rownames(out$mean$covariance.b3) <-
+        colnames(out$median$covariance.b3) <-
+        rownames(out$median$covariance.b3) <-
+        colnames(out$modes$covariance.b3) <-
+        rownames(out$modes$covariance.b3) <-
+        colnames(out$StErr$covariance.b3) <-
+        rownames(out$StErr$covariance.b3) <-
+        colnames(out$Rhat$covariance.b3) <-
+        rownames(out$Rhat$covariance.b3) <-
+        colnames(out$StDev$covariance.b3) <-
+        rownames(out$StDev$covariance.b3) <- colnames(U)
+    }
+  }else{
+    colnames(out$mean$covariance.b) <-
+      rownames(out$mean$covariance.b) <-
+      colnames(out$median$covariance.b) <-
+      rownames(out$median$covariance.b) <-
+      colnames(out$modes$covariance.b) <-
+      rownames(out$modes$covariance.b) <-
+      colnames(out$StErr$covariance.b) <-
+      rownames(out$StErr$covariance.b) <-
+      colnames(out$Rhat$covariance.b) <-
+      rownames(out$Rhat$covariance.b) <-
+      colnames(out$StDev$covariance.b) <-
+      rownames(out$StDev$covariance.b) <- paste(rep(paste("tau", as.character(tau*100), sep = ""),
+                                                    each = ncU),
+                                                rep(colnames(U), Q),
+                                                sep = ".")
+  }
+
   # credible intervalles
 
   # survival part
@@ -573,24 +714,82 @@ mqrjm.BQt <- function(formFixed,
                          out_jags$q97.5$rho)
   }
   # only for diagonal elements of covariance matrix of random effects
-  out$CIs$variances.b <- cbind(as.vector(diag(out_jags$q2.5$covariance.b)),
-                               as.vector(diag(out_jags$q97.5$covariance.b)))
-  rownames(out$CIs$variances.b) <- paste(rep(paste("tau", as.character(tau*100), sep = ""),
-                                             each = ncol(U)),
-                                         rep(colnames(U), Q),
-                                         sep = ".")
+  if(RE_ind){
+    out$CIs$variances.b1 <- cbind(as.vector(diag(out_jags$q2.5$covariance.b1)),
+                                  as.vector(diag(out_jags$q97.5$covariance.b1)))
+    out$CIs$variances.b2 <- cbind(as.vector(diag(out_jags$q2.5$covariance.b2)),
+                                  as.vector(diag(out_jags$q97.5$covariance.b2)))
 
-  if(corr_structure == "free"){
+    rownames(out$CIs$variances.b1) <- rownames(out$CIs$variances.b2) <- colnames(U)
     if(Q==3){
-      colnames(out$CIs$rho12) <-
-        colnames(out$CIs$rho13) <-
-        colnames(out$CIs$rho23) <- c("2.5%", "97.5%")
-    }else{
-      colnames(out$CIs$rho) <- c("2.5%", "97.5%")
+      out$CIs$variances.b3 <- cbind(as.vector(diag(out_jags$q2.5$covariance.b3)),
+                                    as.vector(diag(out_jags$q97.5$covariance.b3)))
+      rownames(out$CIs$variances.b3) <- colnames(U)
     }
+  }else{
+    out$CIs$variances.b <- cbind(as.vector(diag(out_jags$q2.5$covariance.b)),
+                                 as.vector(diag(out_jags$q97.5$covariance.b)))
+    rownames(out$CIs$variances.b) <- paste(rep(paste("tau", as.character(tau*100), sep = ""),
+                                               each = ncol(U)),
+                                           rep(colnames(U), Q),
+                                           sep = ".")
   }
-  if(corr_structure == "middle"){
-    colnames(out$CIs$rho) <- c("2.5%", "97.5%")
+
+  if(!RE_ind){
+    if(corr_structure == "free"){
+      if(Q==3){
+        colnames(out$CIs$beta) <-
+          colnames(out$CIs$sigma) <-
+          colnames(out$CIs$rho12) <-
+          colnames(out$CIs$rho13) <-
+          colnames(out$CIs$rho23) <-
+          colnames(out$CIs$variances.b) <- c("2.5%", "97.5%")
+      }else{
+        colnames(out$CIs$beta) <-
+          colnames(out$CIs$sigma) <-
+          colnames(out$CIs$rho) <-
+          colnames(out$CIs$variances.b) <- c("2.5%", "97.5%")
+      }
+    }
+    if(corr_structure == "middle"){
+      colnames(out$CIs$beta) <-
+        colnames(out$CIs$sigma) <-
+        colnames(out$CIs$rho) <-
+        colnames(out$CIs$variances.b) <- c("2.5%", "97.5%")
+    }
+    if(corr_structure == "none"){
+      colnames(out$CIs$beta) <-
+        colnames(out$CIs$sigma) <-
+        colnames(out$CIs$variances.b) <- c("2.5%", "97.5%")
+    }
+  }else{
+    if(corr_structure == "free"){
+      if(Q==3){
+        colnames(out$CIs$beta) <-
+          colnames(out$CIs$sigma) <-
+          colnames(out$CIs$rho12) <-
+          colnames(out$CIs$rho13) <-
+          colnames(out$CIs$rho23) <-
+          colnames(out$CIs$variances.b1) <-
+          colnames(out$CIs$variances.b2) <-
+          colnames(out$CIs$variances.b3) <- c("2.5%", "97.5%")
+      }else{# not implemented yet...
+        colnames(out$CIs$beta) <-
+          colnames(out$CIs$sigma) <-
+          colnames(out$CIs$rho) <-
+          colnames(out$CIs$variances.b1) <-
+          colnames(out$CIs$variances.b2) <-
+          colnames(out$CIs$variances.b3) <-  c("2.5%", "97.5%")
+      }
+    }
+    if(corr_structure == "middle"){
+      colnames(out$CIs$beta) <-
+        colnames(out$CIs$sigma) <-
+        colnames(out$CIs$rho) <-
+        colnames(out$CIs$variances.b1) <-
+        colnames(out$CIs$variances.b2) <-
+        colnames(out$CIs$variances.b3) <- c("2.5%", "97.5%")
+    }
   }
 
   # save jags output if requires
