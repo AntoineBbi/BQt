@@ -186,7 +186,7 @@ qrjm.BQt <- function(formFixed,
   # design matrice
   mfZ <- model.frame(formSurv, data = tmp)
   Z <- model.matrix(formSurv, mfZ)
-  # use lqmm function to initiated values
+  # use survival::coxph function to initiated values
   cat("> Initialisation of survival parameter values using 'survival' package. \n")
   tmp_model <- survival::coxph(formSurv,
                                data = tmp,
