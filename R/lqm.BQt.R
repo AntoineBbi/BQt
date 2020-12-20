@@ -11,7 +11,7 @@
 #' @param n.burnin integer specifying how many of n.iter to discard as burn-in ; default is 5000
 #' @param n.thin integer specifying the thinning of the chains; default is 1
 #' @param n.adapt integer specifying the number of iterations to use for adaptation; default is NULL
-#' @param save_jagsUI If TRUE (by default), the output of jagsUI package is return by the function
+#' @param save_jagsUI If TRUE (is FALSE by default), the output of jagsUI package is return by the function
 #' @param parallel see jagsUI::jags() function
 #'
 #' @return A \code{BQt} object which is a list with the following elements:
@@ -61,7 +61,7 @@ lqm.BQt <- function(formula,
                     n.burnin = 5000,
                     n.thin = 1,
                     n.adapt = NULL,
-                    save_jagsUI = TRUE,
+                    save_jagsUI = FALSE,
                     parallel = FALSE){
 
   # data
