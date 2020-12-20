@@ -83,9 +83,9 @@ summary.BQt <- function (object, ...)
     prmatrix(sigma_estim, na.print = "")
 
     # Random effects for "mixed regression model
-    cat("\n")
-    cat("#-- (Co)variance matrix of the random-effect(s): \n")
     if(object$control$call_function %in% c("lqmm.BQt","qrjm.BQt")){
+      cat("\n")
+      cat("#-- (Co)variance matrix of the random-effect(s): \n")
       if(object$control$RE_ind){
         tmp <- diag(object$mean$covariance.b)
         colnames(tmp) <- rownames(tmp) <- names(object$mean$covariance.b)
