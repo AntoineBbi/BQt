@@ -57,8 +57,8 @@ summary.BQt <- function (object, ...)
     # beta regression parameters
     if(object$control$call_function %in% c("lqm.BQt","lqmm.BQt","qrjm.BQt")){
       beta_estim <- cbind("Value" = coefs$beta,
-                           "2.5%" = CIs$beta[1, ],
-                           "97.5%" = CIs$beta[2, ],
+                           "2.5%" = CIs$beta[, 1],
+                           "97.5%" = CIs$beta[, 2],
                            "Rhat" = Rhat$beta)
       sigma_estim <- cbind("Value" = coefs$sigma,
                            "2.5%" = CIs$sigma[1],
@@ -97,6 +97,8 @@ summary.BQt <- function (object, ...)
     }
     # for multiple quantile
     if(object$control$call_function %in% c("mlqmm.BQt","mqrjm.BQt")){
+      cat("\n")
+      cat("#-- (Co)variance matrix of the random-effect(s): \n")
       if(object$control$RE_ind){
         tmp <- round(rbind(cbind(object$mean$covariance.b1,
                            matrix(0, nrow=nrow(object$mean$covariance.b1),
