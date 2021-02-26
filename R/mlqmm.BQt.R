@@ -105,12 +105,11 @@ mlqmm.BQt <- function(formFixed,
   if(sum(duplicated(tau))>0)
     stop("'Tau' have to be a numerical vector with no duplicated quantiles.\n")
   if(RE_ind && length(tau)==2){
-    cat("Until now, all random effects are assumed dependant when using only two quantiles.\n")
+    cat("Until now, all random effects are assumed dependant when considering only two quantiles.\n")
     RE_ind <- FALSE
   }
   if(RE_ind && corr_structure=="none"){
-    cat("There is no model considering no correlation structure for multiple quantile regression, then 'RE_ind=FALSE'.\n")
-    RE_ind <- FALSE
+    cat("There is no correlation structure between quantiles in the specified model.\n")
   }
 
   #-- data management
@@ -208,6 +207,7 @@ mlqmm.BQt <- function(formFixed,
                   `middle/3/FALSE` = jags_3mlqmm_m,
                   `none/3/FALSE` = jags_3mlqmm_n,
                   `free/2/FALSE` = jags_2mlqmm_f,
+                  `middle/2/FALSE` = jags_2mlqmm_f,
                   `none/2/FALSE` = jags_mlqmm_n,
                   `free/3/TRUE` = jags_3mlqmm_f_b,
                   `middle/3/TRUE` = jags_3mlqmm_m_b,
@@ -567,14 +567,21 @@ mlqmm.BQt <- function(formFixed,
           colnames(out$CIs$sigma) <-
           colnames(out$CIs$rho) <-
           colnames(out$CIs$variances.b1) <-
-          colnames(out$CIs$variances.b2) <-
-          colnames(out$CIs$variances.b3) <-  c("2.5%", "97.5%")
+          colnames(out$CIs$variances.b2) <-c("2.5%", "97.5%")
       }
     }
     if(corr_structure == "middle"){
       colnames(out$CIs$beta) <-
         colnames(out$CIs$sigma) <-
         colnames(out$CIs$rho) <-
+        colnames(out$CIs$variances.b1) <-
+        colnames(out$CIs$variances.b2) <-
+        colnames(out$CIs$variances.b3) <- c("2.5%", "97.5%")
+    }
+
+    if(corr_structure == "none"){
+      colnames(out$CIs$beta) <-
+        colnames(out$CIs$sigma) <-
         colnames(out$CIs$variances.b1) <-
         colnames(out$CIs$variances.b2) <-
         colnames(out$CIs$variances.b3) <- c("2.5%", "97.5%")
