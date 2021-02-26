@@ -13,7 +13,7 @@ lqm.BQt(
   n.burnin = 5000,
   n.thin = 1,
   n.adapt = NULL,
-  save_jagsUI = TRUE,
+  save_jagsUI = FALSE,
   parallel = FALSE
 )
 }
@@ -34,7 +34,7 @@ lqm.BQt(
 
 \item{n.adapt}{integer specifying the number of iterations to use for adaptation; default is NULL}
 
-\item{save_jagsUI}{If TRUE (by default), the output of jagsUI package is return by the function}
+\item{save_jagsUI}{If TRUE (is FALSE by default), the output of jagsUI package is return by the function}
 
 \item{parallel}{see jagsUI::jags() function}
 }

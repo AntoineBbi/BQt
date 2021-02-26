@@ -17,7 +17,7 @@ lqmm.BQt(
   n.thin = 1,
   n.adapt = NULL,
   precision = 10,
-  save_jagsUI = TRUE,
+  save_jagsUI = FALSE,
   parallel = FALSE
 )
 }
