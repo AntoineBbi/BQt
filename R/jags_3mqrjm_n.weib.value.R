@@ -12,23 +12,20 @@ jags_3mqrjm_n.weib.value <-
         W[j, 1] ~ dexp(1/sigma[1])
         W[j, 2] ~ dexp(1/sigma[2])
         W[j, 3] ~ dexp(1/sigma[3])
-        V11[j] <- W[j, 1]*sigma[1]*c2[1]
-        V22[j] <- W[j, 2]*sigma[2]*c2[2]
-        V33[j] <- W[j, 3]*sigma[3]*c2[3]
-        V12[j] <- sqrt(V11[j]*V22[j])*rho12
-        V13[j] <- sqrt(V11[j]*V33[j])*rho13
-        V23[j] <- sqrt(V22[j]*V33[j])*rho23
+        prec1[j] <- 1/(W[j, 1]*sigma[1]*c2[1])
+        prec2[j] <- 1/(W[j, 2]*sigma[2]*c2[2])
+        prec3[j] <- 1/(W[j, 3]*sigma[3]*c2[3])
         # first quantile distribution
         y[j, 1] ~ dnorm(mu1[j], prec1[j])
         mu1[j] <- inprod(beta[1, 1:ncX], X[j, 1:ncX]) + inprod(b[i, 1:ncU], U[j, 1:ncU]) + c1[1]*W[j, 1]
-        # conditional distrubtion for second quantile given y[j, 1]
+        # second quantile distribution
         y[j, 2] ~ dnorm(mu2[j], prec2[j])
         mu2[j] <- inprod(beta[2, 1:ncX], X[j, 1:ncX]) + inprod(b[i, (ncU+1):(2*ncU)], U[j, 1:ncU]) + c1[2]*W[j, 2]
-        # # Conditional normal distribution for third quantile, conditional on both first and second quantile
+        # third quantile distribution
         y[j, 3] ~ dnorm(mu3[j], prec3[j])
         mu3[j] <- inprod(beta[3, 1:ncX], X[j, 1:ncX]) + inprod(b[i, (ncU*2+1):(3*ncU)], U[j, 1:ncU]) + c1[3]*W[j, 3]
       }#end of j loop
-      # random effects
+      # prior distribution random effects
       b[i, 1:(ncU*Q)] ~ dmnorm(mu0[], prec.Sigma2[, ])
       # survival part
       etaBaseline[i] <- inprod(alpha[1: ncZ], Z[i, 1:ncZ])
