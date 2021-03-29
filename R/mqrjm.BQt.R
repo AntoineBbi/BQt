@@ -129,10 +129,10 @@ mqrjm.BQt <- function(formFixed,
     stop("'tau' have to be a numerical vector with length lower than 4.\n")
   if(sum(duplicated(tau))>0)
     stop("'Tau' have to be a numerical vector with no duplicated quantiles.\n")
-  if(RE_ind && corr_structure=="none"){
-    cat("At least one correlation structure has to be defined, then 'RE_ind=FALSE'.\n")
-    RE_ind <- FALSE
-  }
+  # if(RE_ind && corr_structure=="none"){
+  #   cat("At least one correlation structure has to be defined, then 'RE_ind=FALSE'.\n")
+  #   RE_ind <- FALSE
+  # }
   if(corr_structure=="middle" && length(tau)==2){
     cat("The 'middle' correlation structure is equivalent to the 'free' one when two quantiles are considered (i.e. Q=2). Then, corr_structure=='free'.\n")
     corr_structure <- "free"
@@ -140,7 +140,7 @@ mqrjm.BQt <- function(formFixed,
   if(param=="sharedRE"){
     cat("Only param='value' is assumed for multiple quantile joint model.
         If two quantiles are considered, the latent strucutre is the interquantile range  ;
-        if three quatiles are considered, the interquantile range between the two extreme quantile and the current value of the middle one are considered as latent structure.\n")
+        if three quatiles are considered, the interquantile range between the two extreme quantiles and the current value of the middle one are considered as latent structure.\n")
     param <- "value"
   }
 
@@ -361,6 +361,7 @@ mqrjm.BQt <- function(formFixed,
                   `middle/3/FALSE` = jags_3mqrjm_m.weib.value,
                   `middle/3/TRUE`  = jags_3mqrjm_m_b.weib.value,
                   `none/3/FALSE` = jags_3mqrjm_n.weib.value,
+                  `none/3/TRUE` = jags_3mqrjm_n_b.weib.value,
                   `none/2/FALSE` = jags_2mqrjm_n.weib.value
   )
 
@@ -786,6 +787,13 @@ mqrjm.BQt <- function(formFixed,
       colnames(out$CIs$beta) <-
         colnames(out$CIs$sigma) <-
         colnames(out$CIs$rho) <-
+        colnames(out$CIs$variances.b1) <-
+        colnames(out$CIs$variances.b2) <-
+        colnames(out$CIs$variances.b3) <- c("2.5%", "97.5%")
+    }
+    if(corr_structure == "none"){
+      colnames(out$CIs$beta) <-
+        colnames(out$CIs$sigma) <-
         colnames(out$CIs$variances.b1) <-
         colnames(out$CIs$variances.b2) <-
         colnames(out$CIs$variances.b3) <- c("2.5%", "97.5%")
