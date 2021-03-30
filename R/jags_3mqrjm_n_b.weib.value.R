@@ -31,14 +31,14 @@ jags_3mqrjm_n_b.weib.value <-
       b3[i, 1:ncU] ~ dmnorm(mu0[], prec3.Sigma2[, ])
       # survival part
       etaBaseline[i] <- inprod(alpha[1: ncZ], Z[i, 1:ncZ])
-      shareQ1[i] <- inprod(beta[1, 1:ncX], Xtime[i, 1:ncX]) + inprod(b[i, 1:ncU], Utime[i, 1:ncU])
-      shareQ2[i] <- inprod(beta[2, 1:ncX], Xtime[i, 1:ncX]) + inprod(b[i, (ncU+1):(2*ncU)], Utime[i, 1:ncU])
-      shareQ3[i] <- inprod(beta[3, 1:ncX], Xtime[i, 1:ncX]) + inprod(b[i, (ncU*2+1):(3*ncU)], Utime[i, 1:ncU])
+      shareQ1[i] <- inprod(beta[1, 1:ncX], Xtime[i, 1:ncX]) + inprod(b1[i, 1:ncU], Utime[i, 1:ncU])
+      shareQ2[i] <- inprod(beta[2, 1:ncX], Xtime[i, 1:ncX]) + inprod(b2[i, 1:ncU], Utime[i, 1:ncU])
+      shareQ3[i] <- inprod(beta[3, 1:ncX], Xtime[i, 1:ncX]) + inprod(b3[i, 1:ncU], Utime[i, 1:ncU])
       log_h1[i] <- log(shape) + (shape - 1) * log(Time[i]) + etaBaseline[i] + alpha.assoc[1] * shareQ2[i] + alpha.assoc[2] * (shareQ3[i] - shareQ1[i])
       for (k in 1:K) {
-        shareQ1.s[i, k] <- inprod(beta[1, 1:ncX], Xs[K * (i - 1) + k, 1:ncX]) + inprod(b[i, 1:ncU], Us[K * (i - 1) + k, 1:ncU])
-        shareQ2.s[i, k] <- inprod(beta[2, 1:ncX], Xs[K * (i - 1) + k, 1:ncX]) + inprod(b[i, (ncU+1):(2*ncU)], Us[K * (i - 1) + k, 1:ncU])
-        shareQ3.s[i, k] <- inprod(beta[3, 1:ncX], Xs[K * (i - 1) + k, 1:ncX]) + inprod(b[i, (ncU*2+1):(3*ncU)], Us[K * (i - 1) + k, 1:ncU])
+        shareQ1.s[i, k] <- inprod(beta[1, 1:ncX], Xs[K * (i - 1) + k, 1:ncX]) + inprod(b1[i, 1:ncU], Us[K * (i - 1) + k, 1:ncU])
+        shareQ2.s[i, k] <- inprod(beta[2, 1:ncX], Xs[K * (i - 1) + k, 1:ncX]) + inprod(b2[i, 1:ncU], Us[K * (i - 1) + k, 1:ncU])
+        shareQ3.s[i, k] <- inprod(beta[3, 1:ncX], Xs[K * (i - 1) + k, 1:ncX]) + inprod(b3[i, 1:ncU], Us[K * (i - 1) + k, 1:ncU])
         SurvLong[i, k] <- wk[k] * shape * pow(st[i, k], shape - 1) * exp(alpha.assoc[1] * shareQ2.s[i, k] + alpha.assoc[2] * (shareQ3.s[i, k] - shareQ1.s[i, k]) )
       }
       log_S1[i] <- (-exp(etaBaseline[i]) * P[i] * sum(SurvLong[i, ]))
