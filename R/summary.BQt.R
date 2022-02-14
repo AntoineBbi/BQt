@@ -12,6 +12,7 @@
 #'
 #' @seealso \code{\link{lqm.BQt}}, \code{\link{lqmm.BQt}}, \code{\link{mlqmm.BQt}}, \code{\link{qrjm.BQt}}
 #'
+#' @export
 summary.BQt <- function (object, ...)
   {
   if (!inherits(object, "BQt"))
@@ -28,17 +29,25 @@ summary.BQt <- function (object, ...)
     if(object$control$survMod=="weibull")
       cat(paste("        - Baseline risk function in survival model: Weibull distribution \n"))
   }
-  if(object$control$call_function=="mlqmm.BQt"){
+  if(object$control$call_function=="mqrjm.BQt"){
+    if(length(object$control$tau)==2)
+      cat(paste("        - Association structure in joint model: Current interquantile range of longitudinal process \n"))
+    if(length(object$control$tau)==3)
+      cat(paste("        - Association structure in joint model: Current interquantile range (between extrem quantiles) and middle quantile value of longitudinal process \n"))
+    if(object$control$survMod=="weibull")
+      cat(paste("        - Baseline risk function in survival model: Weibull distribution \n"))
+  }
+  if(object$control$call_function %in% c("mlqmm.BQt","mqrjm.BQt")){
     if(object$control$corr_structure=="free")
-      cat(paste("        - Correlation structure:  'Free' \n"))
+      cat(paste("        - Correlation structure on Y:  'Free' \n"))
     if(object$control$corr_structure=="middle")
-      cat(paste("        - Correlation structure:  'middle' (autoregressive structure based on quantiles'order distance) \n"))
+      cat(paste("        - Correlation structure on Y:  'middle' (autoregressive structure based on quantiles'order distance) \n"))
     if(object$control$corr_structure=="none")
-      cat(paste("        - Correlation structure of b: only through covariance matrix of random effects  \n"))
+      cat(paste("        - Correlation structure on Y: 'none' \n"))
     if(object$control$RE_ind)
-      cat(paste("        - Correlation structure: quantile-specific covariance matrix of random effects  \n"))
+      cat(paste("        - Correlation structure of b: quantile-specific covariance matrix of random effects \n"))
     if(!object$control$RE_ind)
-      cat(paste("        - Correlation structure of b: common covariance matrix of random effects  \n"))
+      cat(paste("        - Correlation structure of b: common covariance matrix of random effects \n"))
   }
   cat(paste("     - Quantile order(s): ", object$control$tau, "\n"))
   cat(paste("     - Number of observations: ", nrow(object$data), "\n"))
@@ -71,8 +80,8 @@ summary.BQt <- function (object, ...)
                           "97.5%" = CIs$beta[, 2],
                           "Rhat" = as.vector(t(Rhat$beta)))
       sigma_estim <- cbind("Value" = coefs$sigma,
-                           "2.5%" = CIs$sigma[1],
-                           "97.5%" = CIs$sigma[2],
+                           "2.5%" = CIs$sigma[, 1],
+                           "97.5%" = CIs$sigma[, 2],
                            "Rhat" = Rhat$sigma)
       rownames(sigma_estim) <- names(coefs$sigma)
     }
@@ -146,7 +155,7 @@ summary.BQt <- function (object, ...)
 
     # survival parameters
     # alpha regression parameters
-    if(object$control$call_function=="qrjm.BQt"){
+    if(object$control$call_function %in% c("qrjm.BQt","mqrjm.BQt")){
       # survival structure parameter
       if(object$control$survMod=="weibull"){
         param_estim1 <- cbind("Value" = object$mean$shape,
