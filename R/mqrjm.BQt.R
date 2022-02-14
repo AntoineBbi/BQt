@@ -138,9 +138,9 @@ mqrjm.BQt <- function(formFixed,
     corr_structure <- "free"
   }
   if(param=="sharedRE"){
-    cat("Only param='value' is assumed for multiple quantile joint model.
-        If two quantiles are considered, the latent strucutre is the interquantile range  ;
-        if three quatiles are considered, the interquantile range between the two extreme quantiles and the current value of the middle one are considered as latent structure.\n")
+    cat("Only param='value' is assumed for multiple quantile joint model.\n
+        If two quantiles are considered, then latent strucutre is the interquantile range ;\n
+        if three quatiles are considered, then interquantile range between the two extreme quantiles and the current value of the middle one are considered as latent structure.\n")
     param <- "value"
   }
 
@@ -163,6 +163,14 @@ mqrjm.BQt <- function(formFixed,
   Q <- length(tau)
   if(Q==2 && corr_structure=="middle")
     corr_structure = "free"
+  if(survMod == "constant"){
+    if(corr_structure!="none")
+      stop("A constant baseline risk function (i.e. exponential model) is only considered for 'none' in 'corr_structure'.\n")
+    if(length(tau)!=3)
+      stop("A constant baseline risk function (i.e. exponential model) is only considered for 3-multiple quantile version.\n")
+    if(ncU!=2 || ncX!=2)
+      stop("A constant baseline risk function (i.e. exponential model) is only considered for a linear trajectory without considering covarates than 'timeVar'.\n")
+  }
   # use lqmm function to initiated values
   cat("Initiation of parameter values using lqmm package. \n")
   tmp_model <- lqmm::lqmm(fixed = formFixed,
@@ -353,22 +361,29 @@ mqrjm.BQt <- function(formFixed,
 
 
   # write jags model (only Weibull baseline hazard function)
-  model <- switch(paste(corr_structure, Q, RE_ind, sep = "/"),
-                  `free/3/FALSE` = jags_3mqrjm_f.weib.value,
-                  `free/3/TRUE`  = jags_3mqrjm_f_b.weib.value,
-                  `free/2/FALSE` = jags_2mqrjm_f.weib.value,
-                  `free/2/TRUE`  = jags_2mqrjm_f_b.weib.value,
-                  `middle/3/FALSE` = jags_3mqrjm_m.weib.value,
-                  `middle/3/TRUE`  = jags_3mqrjm_m_b.weib.value,
-                  `none/3/FALSE` = jags_3mqrjm_n.weib.value,
-                  `none/3/TRUE` = jags_3mqrjm_n_b.weib.value,
-                  `none/2/FALSE` = jags_2mqrjm_n.weib.value
-  )
+
+  if(survMod == "weibull"){
+    model <- switch(paste(corr_structure, Q, RE_ind, sep = "/"),
+                    `free/3/FALSE` = jags_3mqrjm_f.weib.value,
+                    `free/3/TRUE`  = jags_3mqrjm_f_b.weib.value,
+                    `free/2/FALSE` = jags_2mqrjm_f.weib.value,
+                    `free/2/TRUE`  = jags_2mqrjm_f_b.weib.value,
+                    `middle/3/FALSE` = jags_3mqrjm_m.weib.value,
+                    `middle/3/TRUE`  = jags_3mqrjm_m_b.weib.value,
+                    `none/3/FALSE` = jags_3mqrjm_n.weib.value,
+                    `none/3/TRUE` = jags_3mqrjm_n_b.weib.value,
+                    `none/3/TRUE` = jags_3mqrjm_n.const.lin_value,
+                    `none/2/FALSE` = jags_2mqrjm_n.weib.value
+                    )
+  }
+  if(survMod == "constant"){
+    model <- switch(paste(corr_structure, Q, RE_ind, sep = "/"),
+                    `none/3/TRUE` = jags_3mqrjm_n.const.lin_value
+                    )
+  }
 
   # parameters to save in the sampling step
   parms_to_save <- c("alpha", "alpha.assoc", "beta", "sigma")
-  if(survMod == "weibull")
-    parms_to_save <- c(parms_to_save, "shape")
 
   # specific parameters
   if(Q==3){
@@ -667,9 +682,11 @@ mqrjm.BQt <- function(formFixed,
   # credible intervalles
 
   # survival part
-  out$CIs$shape <- c(out_jags$q2.5$shape,
-                     out_jags$q97.5$shape)
-  names(out$CIs$shape) <- c("2.5%", "97.5%")
+  if(survMod == "weibull"){
+    out$CIs$shape <- c(out_jags$q2.5$shape,
+                       out_jags$q97.5$shape)
+    names(out$CIs$shape) <- c("2.5%", "97.5%")
+  }
 
   out$CIs$alpha <- cbind(as.vector(t(out_jags$q2.5$alpha)),
                          as.vector(t(out_jags$q97.5$alpha)))
