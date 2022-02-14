@@ -109,7 +109,7 @@ mlqmm.BQt <- function(formFixed,
     RE_ind <- FALSE
   }
   if(RE_ind && corr_structure=="none"){
-    cat("There is no correlation structure between quantiles in the specified model.\n")
+    cat("WARNING: There is no correlation structure between quantiles in the specified model.\n")
   }
 
   #-- data management
