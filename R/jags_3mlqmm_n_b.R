@@ -18,7 +18,7 @@ jags_3mlqmm_n_b <-
         # first quantile distribution
         y[j, 1] ~ dnorm(mu1[j], prec1[j])
         mu1[j] <- inprod(beta[1, 1:ncX], X[j, 1:ncX]) + inprod(b1[i, 1:ncU], U[j, 1:ncU]) + c1[1]*W[j, 1]
-        # conditional distrubtion for second quantile given y[j, 1]
+        # conditional distribution for second quantile given y[j, 1]
         y[j, 2] ~ dnorm(mu2[j], prec2[j])
         mu2[j] <- inprod(beta[2, 1:ncX], X[j, 1:ncX]) + inprod(b2[i, 1:ncU], U[j, 1:ncU]) + c1[2]*W[j, 2]
         # # Conditional normal distribution for third quantile, conditional on both first and second quantile
