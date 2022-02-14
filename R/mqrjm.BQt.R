@@ -303,7 +303,7 @@ mqrjm.BQt <- function(formFixed,
                    priorTau.alpha.assoc = 1/precision)
                    )
   }else{
-    initial.values$alpha.assoc <- rep(0,Q-1)
+    initial.values$alpha.assoc <- rep(0.01, Q-1)
     jags.data <- c(jags.data,
                    list(priorMean.alpha.assoc = rep(0,Q-1),
                    priorTau.alpha.assoc = diag(rep(1/precision,Q-1)))
