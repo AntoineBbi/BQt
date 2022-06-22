@@ -10,7 +10,7 @@
 #'
 #' @author Antoine Barbieri
 #'
-#' @seealso \code{\link{lqm.BQt}}, \code{\link{lqmm.BQt}}, \code{\link{mlqmm.BQt}}, \code{\link{qrjm.BQt}}
+#' @seealso \code{\link{lqm}}, \code{\link{lqmm}}, \code{\link{mlqmm}}, \code{\link{qrjm}}
 #'
 #' @export
 summary.BQt <- function (object, ...)
@@ -21,7 +21,7 @@ summary.BQt <- function (object, ...)
   #---- Global details
   cat("#-- Statistical model:", "\n")
   cat(paste("     - Quantile regression from '", object$control$call_function), "' function \n")
-  if(object$control$call_function=="qrjm.BQt"){
+  if(object$control$call_function=="qrjm"){
     if(object$control$param=="sharedRE")
       cat(paste("        - Association structure in joint model: Shared random effect(s) \n"))
     if(object$control$param=="value")
@@ -29,7 +29,7 @@ summary.BQt <- function (object, ...)
     if(object$control$survMod=="weibull")
       cat(paste("        - Baseline risk function in survival model: Weibull distribution \n"))
   }
-  if(object$control$call_function=="mqrjm.BQt"){
+  if(object$control$call_function=="mqrjm"){
     if(length(object$control$tau)==2)
       cat(paste("        - Association structure in joint model: Current interquantile range of longitudinal process \n"))
     if(length(object$control$tau)==3)
@@ -37,7 +37,7 @@ summary.BQt <- function (object, ...)
     if(object$control$survMod=="weibull")
       cat(paste("        - Baseline risk function in survival model: Weibull distribution \n"))
   }
-  if(object$control$call_function %in% c("mlqmm.BQt","mqrjm.BQt")){
+  if(object$control$call_function %in% c("mlqmm","mqrjm")){
     if(object$control$corr_structure=="free")
       cat(paste("        - Correlation structure on Y:  'Free' \n"))
     if(object$control$corr_structure=="middle")
@@ -51,10 +51,10 @@ summary.BQt <- function (object, ...)
   }
   cat(paste("     - Quantile order(s): ", object$control$tau, "\n"))
   cat(paste("     - Number of observations: ", nrow(object$data), "\n"))
-  if(object$control$call_function %in% c("lqmm.BQt","qrjm.BQt", "mlqmm.BQt")){
+  if(object$control$call_function %in% c("lqmm","qrjm", "mlqmm")){
     cat(paste("     - Number of statistic units (e.g. subject): ", object$control$I, "\n"))
   }
-  if(object$control$call_function=="qrjm.BQt"){
+  if(object$control$call_function=="qrjm"){
     cat(paste("     - Number of observed events: ", sum(object$control$event), "\n"))
   }
   cat("\n")
@@ -64,7 +64,7 @@ summary.BQt <- function (object, ...)
     CIs <- object$CIs
     Rhat <- object$Rhat
     # beta regression parameters
-    if(object$control$call_function %in% c("lqm.BQt","lqmm.BQt","qrjm.BQt")){
+    if(object$control$call_function %in% c("lqm","lqmm","qrjm")){
       beta_estim <- cbind("Value" = coefs$beta,
                            "2.5%" = CIs$beta[, 1],
                            "97.5%" = CIs$beta[, 2],
@@ -92,7 +92,7 @@ summary.BQt <- function (object, ...)
     prmatrix(sigma_estim, na.print = "")
 
     # Random effects for "mixed regression model
-    if(object$control$call_function %in% c("lqmm.BQt","qrjm.BQt")){
+    if(object$control$call_function %in% c("lqmm","qrjm")){
       cat("\n")
       cat("#-- (Co)variance matrix of the random-effect(s): \n")
       if(object$control$RE_ind){
@@ -105,7 +105,7 @@ summary.BQt <- function (object, ...)
         prmatrix(object$mean$covariance.b, na.print = "")
     }
     # for multiple quantile
-    if(object$control$call_function %in% c("mlqmm.BQt","mqrjm.BQt")){
+    if(object$control$call_function %in% c("mlqmm","mqrjm")){
       cat("\n")
       cat("#-- (Co)variance matrix of the random-effect(s): \n")
       if(object$control$RE_ind){
@@ -155,7 +155,7 @@ summary.BQt <- function (object, ...)
 
     # survival parameters
     # alpha regression parameters
-    if(object$control$call_function %in% c("qrjm.BQt","mqrjm.BQt")){
+    if(object$control$call_function %in% c("qrjm","mqrjm")){
       # survival structure parameter
       if(object$control$survMod=="weibull"){
         param_estim1 <- cbind("Value" = object$mean$shape,

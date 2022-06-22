@@ -1,4 +1,4 @@
-#' \code{lqmm.BQt} fits linear quantile mixed model
+#' \code{lqmm} fits linear quantile mixed model
 #'
 #' Function using JAGS to estimate the linear quantile mixed model assuming asymmetric Laplace
 #' distribution for residual error.
@@ -52,13 +52,13 @@
 #' data("Orthodont", package = "lqmm")
 #'
 #' #---- Fit regression model for the first quartile
-#' lqmm_025 <- lqmm.BQt(formFixed = distance ~ age,
-#'                      formRandom = ~ age,
-#'                      formGroup = ~ Subject,
-#'                      data = Orthodont,
-#'                      tau = 0.25,
-#'                      n.iter = 1000,
-#'                      n.burnin = 500)
+#' lqmm_025 <- lqmm(formFixed = distance ~ age,
+#'                  formRandom = ~ age,
+#'                  formGroup = ~ Subject,
+#'                  data = Orthodont,
+#'                  tau = 0.25,
+#'                  n.iter = 1000,
+#'                  n.burnin = 500)
 #'
 #' #---- Get the posterior means
 #' lqmm_025$mean
@@ -66,20 +66,20 @@
 #' #---- Summary of output
 #' summary(lqmm_025)
 #'
-lqmm.BQt <- function(formFixed,
-                     formRandom,
-                     formGroup,
-                     data,
-                     tau,
-                     RE_ind = FALSE,
-                     n.chains = 3,
-                     n.iter = 10000,
-                     n.burnin = 5000,
-                     n.thin = 1,
-                     n.adapt = NULL,
-                     precision = 10,
-                     save_jagsUI = FALSE,
-                     parallel = FALSE){
+lqmm <- function(formFixed,
+                 formRandom,
+                 formGroup,
+                 data,
+                 tau,
+                 RE_ind = FALSE,
+                 n.chains = 3,
+                 n.iter = 10000,
+                 n.burnin = 5000,
+                 n.thin = 1,
+                 n.adapt = NULL,
+                 precision = 10,
+                 save_jagsUI = FALSE,
+                 parallel = FALSE){
 
 
   #-- data management
@@ -193,7 +193,7 @@ lqmm.BQt <- function(formFixed,
   out <- list(data = data)
   out$control <- list(formula = formula,
                       tau = tau,
-                      call_function = "lqmm.BQt",
+                      call_function = "lqmm",
                       n.chains = n.chains,
                       parallel = parallel,
                       n.adapt = n.adapt,

@@ -1,4 +1,4 @@
-#' \code{lqm.BQt} fits linear quantile regression model
+#' \code{lqm} fits linear quantile regression model
 #'
 #' Function using JAGS to estimate the linear quantile regression model assuming asymmetric Laplace
 #' distribution for residual error.
@@ -41,11 +41,11 @@
 #' data(wave)
 #'
 #' #---- Fit regression model for the first quartile
-#' lqm_025 <- lqm.BQt(formula = h110d~vent_vit_moy,
-#'                    data = wave,
-#'                    n.iter = 1000,
-#'                    n.burnin = 500,
-#'                    tau = 0.25)
+#' lqm_025 <- lqm(formula = h110d~vent_vit_moy,
+#'                data = wave,
+#'                n.iter = 1000,
+#'                n.burnin = 500,
+#'                tau = 0.25)
 #'
 #' #---- Get the posterior mean of parameters
 #' lqm_025$mean
@@ -53,16 +53,16 @@
 #' #---- Summary of output
 #' summary(lqm_025)
 #'
-lqm.BQt <- function(formula,
-                    data,
-                    tau = 0.5,
-                    n.chains = 3,
-                    n.iter = 10000,
-                    n.burnin = 5000,
-                    n.thin = 1,
-                    n.adapt = NULL,
-                    save_jagsUI = FALSE,
-                    parallel = FALSE){
+lqm <- function(formula,
+                data,
+                tau = 0.5,
+                n.chains = 3,
+                n.iter = 10000,
+                n.burnin = 5000,
+                n.thin = 1,
+                n.adapt = NULL,
+                save_jagsUI = FALSE,
+                parallel = FALSE){
 
   # data
   tmp <- data[c(all.vars(formula))]
@@ -124,7 +124,7 @@ lqm.BQt <- function(formula,
   out <- list(data = data)
   out$control <- list(formula = formula,
                       tau = tau,
-                      call_function = "lqm.BQt",
+                      call_function = "lqm",
                       n.chains = n.chains,
                       parallel = parallel,
                       n.adapt = n.adapt,

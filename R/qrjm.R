@@ -1,4 +1,4 @@
-#' \code{qrjm.BQt} fits quantile regression joint model
+#' \code{qrjm} fits quantile regression joint model
 #'
 #' Function using JAGS via jagsUI package to estimate the quantile regression joint model assuming asymmetric Laplace distribution for residual error.
 #' Joint modeling concerns longitudinal data and time-to-event
@@ -59,18 +59,18 @@
 #' data("aids", package = "joineR")
 #'
 #' #---- Fit quantile regression joint model for the first quartile
-#' qrjm_25 <- qrjm.BQt(formFixed = CD4 ~ obstime,
-#'                     formRandom = ~ obstime,
-#'                     formGroup = ~ id,
-#'                     formSurv = Surv(time, death) ~ drug + gender + prevOI + AZT,
-#'                     survMod = "weibull",
-#'                     param = "value",
-#'                     timeVar= "obstime",
-#'                     data = aids,
-#'                     tau = 0.25)
+#' qrjm_25 <- qrjm(formFixed = CD4 ~ obstime,
+#'                formRandom = ~ obstime,
+#'                formGroup = ~ id,
+#'                formSurv = Surv(time, death) ~ drug + gender + prevOI + AZT,
+#'                survMod = "weibull",
+#'                param = "value",
+#'                timeVar= "obstime",
+#'                data = aids,
+#'                tau = 0.25)
 #'
 #' #---- Visualize the trace for beta parameters
-#' jagsUI::traceplot(qrjm_25$out_jagsUI,parameters = "beta" )
+#' jagsUI::traceplot(qrjm_25$out_jagsUI, parameters = "beta" )
 #'
 #' #---- Get the estimated coefficients : posterior means
 #' qrjm_25$mean
@@ -79,26 +79,26 @@
 #' BQt::summary.BQt(qrjm_25)
 #' }
 #'
-qrjm.BQt <- function(formFixed,
-                     formRandom,
-                     formGroup,
-                     formSurv,
-                     survMod = "weibull",
-                     param = "value",
-                     timeVar,
-                     data,
-                     tau,
-                     RE_ind = FALSE,
-                     n.chains = 3,
-                     n.iter = 10000,
-                     n.burnin = 5000,
-                     n.thin = 5,
-                     n.adapt = 5000,
-                     precision = 10,
-                     C = 1000,
-                     save_jagsUI = TRUE,
-                     save_va = FALSE,
-                     parallel = FALSE){
+qrjm <- function(formFixed,
+                 formRandom,
+                 formGroup,
+                 formSurv,
+                 survMod = "weibull",
+                 param = "value",
+                 timeVar,
+                 data,
+                 tau,
+                 RE_ind = FALSE,
+                 n.chains = 3,
+                 n.iter = 10000,
+                 n.burnin = 5000,
+                 n.thin = 5,
+                 n.adapt = 5000,
+                 precision = 10,
+                 C = 1000,
+                 save_jagsUI = TRUE,
+                 save_va = FALSE,
+                 parallel = FALSE){
 
   # #
   # #   -- To do
@@ -344,7 +344,7 @@ qrjm.BQt <- function(formFixed,
                       formSurv = formSurv,
                       timeVar = timeVar,
                       tau = tau,
-                      call_function = "qrjm.BQt",
+                      call_function = "qrjm",
                       I = I,
                       C = C,
                       param = param,
