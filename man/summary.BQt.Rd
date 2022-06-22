@@ -19,7 +19,7 @@ The function provides a summary of BQt object (lqm, lqmm, qrjm, mlqmm).
 Therfore, the estimation parameters (posterior mean) and bounds of the credible interval at 95% and Gelman & Rubin diagnostic are given.
 }
 \seealso{
-\code{\link{lqm.BQt}}, \code{\link{lqmm.BQt}}, \code{\link{mlqmm.BQt}}, \code{\link{qrjm.BQt}}
+\code{\link{lqm}}, \code{\link{lqmm}}, \code{\link{mlqmm}}, \code{\link{qrjm}}
 }
 \author{
 Antoine Barbieri
